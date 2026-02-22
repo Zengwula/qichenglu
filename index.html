@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="启程录">
+<title>启程录 - 每一次投递，都是新的启程</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;900&display=swap');
+:root {
+  --bg:#F0F6FB;--card:#FFF;--text:#1C1C1E;--text2:#6C6C70;--text3:#AEAEB2;
+  --border:#DFEAF5;--accent:#2E86C1;--accent2:#3498DB;--accent-light:#E8F4FD;
+  --s-todo:#B8B8BE;--s-applied:#5B9BD5;--s-written:#8E7CC3;
+  --s-r1:#E6A23C;--s-r2:#F5923E;--s-r3:#E8603C;--s-hr:#D4578B;
+  --s-offer:#2FA84F;--s-rejected:#C44040;--s-withdrawn:#999;--s-hung:#8B5CF6;
+  --shadow:0 1px 4px rgba(0,0,0,.06);--shadow-md:0 4px 16px rgba(0,0,0,.08);
+  --R:14px;--Rs:10px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+body{font-family:'Noto Sans SC',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;-webkit-font-smoothing:antialiased;overflow-x:hidden;padding-bottom:calc(72px + var(--safe-b))}
+
+/* ── Bottom Tab Bar ── */
+.tab-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(240,246,251,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:6px 0 calc(6px + var(--safe-b));justify-content:space-around}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;border:none;background:none;font-family:inherit;font-size:10px;font-weight:500;color:var(--text3);cursor:pointer;transition:.2s}
+.tab-item.active{color:var(--accent)}
+.tab-item .ico{font-size:22px;line-height:1}
+
+/* ── Page Container ── */
+.page{display:none;min-height:calc(100dvh - 72px)}
+.page.active{display:block}
+.page-header{position:sticky;top:0;z-index:50;background:rgba(240,246,251,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+.page-title{font-size:20px;font-weight:800;letter-spacing:-.5px}
+.page-sub{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* ── Season Picker ── */
+.season-bar{display:flex;gap:6px;padding:10px 16px;overflow-x:auto;scrollbar-width:none}
+.season-bar::-webkit-scrollbar{display:none}
+.season-chip{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;border:1.5px solid var(--border);background:var(--card);cursor:pointer;font-family:inherit;color:var(--text2);transition:.2s}
+.season-chip.active{background:var(--text);color:#fff;border-color:var(--text)}
+
+/* ── Stats Pills ── */
+.stats-row{display:flex;gap:6px;padding:8px 16px;overflow-x:auto;scrollbar-width:none}
+.stats-row::-webkit-scrollbar{display:none}
+.s-pill{flex-shrink:0;padding:6px 12px;border-radius:18px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500}
+.s-pill .n{font-weight:700;font-size:15px}
+.s-pill.accent{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ── Filter Bar ── */
+.filter-bar{padding:8px 16px;display:flex;gap:8px;align-items:center}
+.filter-select{padding:7px 10px;border-radius:8px;font-size:13px;font-weight:500;border:1.5px solid var(--border);background:var(--card);cursor:pointer;font-family:inherit;color:var(--text);outline:none;transition:.2s;max-width:140px}
+.filter-select:focus{border-color:var(--accent)}
+.filter-select.has-val{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+.filter-label{font-size:11px;color:var(--text3);font-weight:600;flex-shrink:0}
+.search-box{width:100%;padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--Rs);font-size:14px;font-family:inherit;background:var(--card);outline:none;transition:.2s;margin-bottom:4px}
+.search-box:focus{border-color:var(--accent)}
+
+/* ── Kanban ── */
+.kanban{display:flex;gap:10px;padding:8px 16px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--accent) var(--border);min-height:40vh}
+.kanban::-webkit-scrollbar{display:none}
+.k-col{flex-shrink:0;width:240px}
+.k-col-h{display:flex;align-items:center;gap:5px;padding:6px 0 8px;font-size:12px;font-weight:600;color:var(--text2)}
+.k-col-h .dot{width:7px;height:7px;border-radius:50%}
+.k-col-h .cnt{margin-left:auto;background:var(--bg);padding:1px 7px;border-radius:8px;font-size:10px}
+.k-cards{display:flex;flex-direction:column;gap:6px}
+
+/* ── Job Card ── */
+.jc{background:var(--card);border-radius:var(--Rs);padding:12px;border:1px solid var(--border);cursor:pointer;transition:.15s;box-shadow:var(--shadow)}
+.jc:active{transform:scale(.98)}
+.jc .co{font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px}
+.jc .co .tb{font-size:10px;font-weight:500;padding:1px 5px;border-radius:4px;background:var(--accent-light);color:var(--accent)}
+.jc .po{font-size:12px;color:var(--text2);margin:2px 0 6px}
+.jc .tags{display:flex;flex-wrap:wrap;gap:3px}
+.jc .t{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg);color:var(--text2);font-weight:500}
+.jc .t.city{background:#EFF6FF;color:#1E40AF}
+.jc .t.plat{background:#FFF7ED;color:#9A3412}
+.jc .t.notes{background:#FDF4FF;color:#7C3AED}
+.jc .t.hung{background:#FEE2E2;color:#DC2626}
+.jc .dt{font-size:10px;color:var(--text3);margin-top:4px}
+
+/* ── List View ── */
+.list-wrap{padding:0 16px 20px}
+.li{display:flex;align-items:center;gap:10px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:var(--Rs);margin-bottom:6px;cursor:pointer;transition:.15s}
+.li:active{transform:scale(.99)}
+.li .sd{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.li .inf{flex:1;min-width:0}
+.li .inf .tp{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .inf .bt{font-size:11px;color:var(--text2);margin-top:1px}
+.li .sl{font-size:10px;font-weight:600;padding:3px 8px;border-radius:5px;flex-shrink:0}
+
+/* ── Calendar ── */
+.cal-month{padding:0 16px;margin-bottom:20px}
+.cal-month-title{font-size:14px;font-weight:700;margin-bottom:8px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-hd{text-align:center;font-size:10px;font-weight:600;color:var(--text3);padding:4px}
+.cal-cell{text-align:center;padding:6px 2px;border-radius:8px;font-size:12px;color:var(--text3);min-height:36px;position:relative;cursor:default}
+.cal-cell.cur-month{color:var(--text)}
+.cal-cell.today{background:var(--accent-light);font-weight:700;color:var(--accent)}
+.cal-cell .cal-dots{display:flex;gap:2px;justify-content:center;margin-top:1px}
+.cal-cell .cd{width:5px;height:5px;border-radius:50%}
+.cal-cell.has-event{cursor:pointer;background:#DBEAFE;border-radius:8px;font-weight:600;color:#1D4ED8}
+.cal-cell.has-event.today{background:linear-gradient(135deg,var(--accent-light),#DBEAFE)}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 16px}
+.cal-nav-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cal-nav-title{font-size:16px;font-weight:700}
+.cal-events{padding:0 16px 20px}
+.cal-event{padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--Rs);margin-bottom:6px;cursor:pointer}
+.cal-event:active{transform:scale(.99)}
+.cal-event .ce-round{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:4px}
+.cal-event .ce-co{font-size:14px;font-weight:600}
+.cal-event .ce-po{font-size:12px;color:var(--text2)}
+
+/* ── Charts ── */
+.charts-wrap{padding:0 16px 20px}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--R);padding:16px;margin-bottom:12px}
+.chart-title{font-size:14px;font-weight:700;margin-bottom:12px}
+.pie-wrap{display:flex;align-items:center;gap:20px}
+.pie-svg{flex-shrink:0}
+.pie-legend{flex:1;display:flex;flex-direction:column;gap:4px}
+.pie-legend-item{display:flex;align-items:center;gap:6px;font-size:12px}
+.pie-legend-item .plc{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.pie-legend-item .pln{flex:1;color:var(--text2)}
+.pie-legend-item .plv{font-weight:700}
+.funnel-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.funnel-bar .fb-label{width:50px;font-size:11px;font-weight:500;color:var(--text2);text-align:right}
+.funnel-bar .fb-track{flex:1;height:20px;background:var(--bg);border-radius:4px;overflow:hidden}
+.funnel-bar .fb-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:10px;font-weight:700;color:#fff;min-width:fit-content}
+.funnel-bar .fb-num{font-size:12px;font-weight:600;width:30px;text-align:right}
+
+/* ── Interview Notes (面经) ── */
+.notes-list{padding:0 16px 20px}
+.note-card{background:var(--card);border:1px solid var(--border);border-radius:var(--R);padding:14px;margin-bottom:10px}
+.note-card .nc-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.note-card .nc-co{font-size:14px;font-weight:700}
+.note-card .nc-round{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px}
+.note-card .nc-date{font-size:11px;color:var(--text3);margin-left:auto}
+.note-card .nc-body{font-size:13px;color:var(--text2);line-height:1.8;white-space:pre-wrap;word-break:break-word;background:var(--bg);padding:10px 12px;border-radius:8px;cursor:text;min-height:40px;transition:border .2s;border:1.5px solid transparent}
+.note-card .nc-body:hover{border-color:var(--border)}
+.note-card .nc-edit{width:100%;font-size:13px;color:var(--text);line-height:1.8;background:var(--bg);padding:10px 12px;border-radius:8px;border:1.5px solid var(--accent);font-family:inherit;outline:none;resize:vertical;min-height:100px}
+.note-card .nc-result{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-top:6px}
+.note-card .nc-actions{display:flex;gap:6px;margin-top:8px}
+.nc-btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:.2s}
+.nc-btn:active{transform:scale(.96)}
+.nc-btn.save{background:var(--accent);color:#fff}
+.nc-btn.cancel{background:var(--bg);color:var(--text2);border:1px solid var(--border)}
+.nc-btn.edit{background:var(--bg);color:var(--accent);border:1px solid var(--border);margin-left:auto}
+.note-empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px}
+
+/* ── FAB ── */
+.fab{position:fixed;bottom:calc(80px + var(--safe-b));right:16px;width:52px;height:52px;border-radius:15px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(46,134,193,.35);cursor:pointer;border:none;transition:.2s;z-index:50}
+.fab:active{transform:scale(.9)}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;animation:fadeIn .2s}
+.modal-overlay.show{display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:600px){.modal-overlay.show{align-items:center}}
+.modal{background:var(--bg);width:100%;max-width:560px;max-height:92dvh;border-radius:20px 20px 0 0;overflow-y:auto;-webkit-overflow-scrolling:touch;animation:slideUp .3s ease}
+@media(min-width:600px){.modal{border-radius:20px;max-height:85vh}}
+.m-hd{position:sticky;top:0;z-index:1;background:var(--bg);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.m-hd h2{font-size:16px;font-weight:700}
+.m-close{width:28px;height:28px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;border:none;color:var(--text2)}
+.m-body{padding:14px 20px 30px}
+
+/* ── Form Fields ── */
+.fs{margin-bottom:16px}
+.fs-t{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.fr{display:flex;gap:8px;margin-bottom:8px}
+.ff{flex:1}
+.ff label{display:block;font-size:11px;font-weight:500;color:var(--text2);margin-bottom:3px}
+.ff input,.ff select,.ff textarea{width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);outline:none;transition:.2s}
+.ff input:focus,.ff select:focus,.ff textarea:focus{border-color:var(--accent)}
+.ff textarea{resize:vertical;min-height:70px}
+
+.status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:4px}
+.so{padding:7px 4px;border-radius:7px;border:1.5px solid var(--border);text-align:center;font-size:11px;font-weight:500;cursor:pointer;transition:.2s;background:var(--card);font-family:inherit;color:var(--text)}
+.so.active{color:#fff}
+
+.iv-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px}
+.iv-item .iv-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.iv-item .iv-label{font-size:12px;font-weight:600}
+.iv-rm{font-size:10px;color:var(--s-rejected);cursor:pointer;border:none;background:none;font-family:inherit;font-weight:500}
+.add-iv{width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:7px;background:transparent;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;font-family:inherit;transition:.2s}
+.add-iv:hover{border-color:var(--accent);color:var(--accent)}
+
+.result-grid{display:flex;gap:4px;flex-wrap:wrap}
+.result-opt{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:500;border:1.5px solid var(--border);background:var(--card);cursor:pointer;font-family:inherit;color:var(--text2);transition:.2s}
+.result-opt.active{color:#fff}
+
+.m-actions{display:flex;gap:8px;padding:12px 20px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--bg)}
+.btn{flex:1;padding:11px;border-radius:var(--Rs);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:.2s}
+.btn:active{transform:scale(.97)}
+.btn-p{background:var(--accent);color:#fff}
+.btn-s{background:var(--card);color:var(--text);border:1.5px solid var(--border)}
+.btn-d{background:#FEE2E2;color:#DC2626;flex:.5}
+
+/* ── Backup Banner ── */
+.backup-banner{margin:8px 16px;padding:10px 14px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:var(--Rs);display:flex;align-items:center;gap:8px;font-size:12px;color:#92400E;font-weight:500;cursor:pointer}
+.backup-banner:active{opacity:.8}
+.backup-banner .bb-x{margin-left:auto;font-size:16px;opacity:.5}
+
+.empty{text-align:center;padding:50px 20px;color:var(--text3)}
+.empty .ei{font-size:42px;margin-bottom:10px}
+.empty .et{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.empty .es{font-size:12px;line-height:1.6}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+/* ── Header Buttons ── */
+.hd-btn{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;transition:.2s}
+.hd-btn:active{transform:scale(.9)}
+
+/* ── Kanban Scroll Hint ── */
+.kanban-wrap{position:relative}
+.kanban-hint{display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 16px;font-size:11px;color:var(--text3);font-weight:500}
+.kanban-hint .arrow{display:inline-block;animation:bounceX 1.5s infinite}
+@keyframes bounceX{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+.kanban::-webkit-scrollbar{height:4px}
+.kanban::-webkit-scrollbar-track{background:var(--border);border-radius:2px;margin:0 16px}
+.kanban::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px}
+.kanban{scrollbar-color:var(--accent) var(--border)}
+
+/* ── Guide Modal ── */
+.guide-section{margin-bottom:18px}
+.guide-section h3{font-size:14px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.guide-section p{font-size:13px;color:var(--text2);line-height:1.7}
+.guide-tip{background:var(--accent-light);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--accent);line-height:1.6;margin-top:8px}
+
+/* ── Welcome Banner ── */
+.welcome-banner{margin:8px 16px;padding:14px;background:var(--card);border:1.5px solid var(--accent);border-radius:var(--R);position:relative}
+.welcome-banner .wb-title{font-size:15px;font-weight:700;margin-bottom:4px;color:var(--accent)}
+.welcome-banner .wb-sub{font-size:12px;color:var(--text2);line-height:1.6}
+.welcome-banner .wb-actions{display:flex;gap:8px;margin-top:10px}
+.welcome-banner .wb-btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:.2s}
+.welcome-banner .wb-btn:active{transform:scale(.96)}
+.welcome-banner .wb-btn.primary{background:var(--accent);color:#fff}
+.welcome-banner .wb-btn.secondary{background:var(--bg);color:var(--text2);border:1px solid var(--border)}
+.welcome-banner .wb-close{position:absolute;top:10px;right:12px;font-size:16px;color:var(--text3);cursor:pointer;background:none;border:none}
+
+/* ── Achievements ── */
+.ach-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.ach-card{padding:12px;border-radius:var(--Rs);border:1.5px solid var(--border);background:var(--card);text-align:center;transition:.2s;position:relative;overflow:hidden}
+.ach-card.locked{opacity:.4;filter:grayscale(1)}
+.ach-card.unlocked{border-color:var(--accent);background:var(--accent-light)}
+.ach-card.new{animation:achPop .5s ease}
+.ach-ico{font-size:28px;margin-bottom:4px}
+.ach-name{font-size:13px;font-weight:700;margin-bottom:2px}
+.ach-desc{font-size:11px;color:var(--text2);line-height:1.4}
+.ach-prog{margin-top:6px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.ach-prog-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+.ach-summary{text-align:center;padding:16px;margin-bottom:16px;background:var(--card);border-radius:var(--R);border:1px solid var(--border)}
+.ach-summary .big{font-size:32px;font-weight:900;color:var(--accent)}
+.ach-summary .sub{font-size:13px;color:var(--text2);margin-top:2px}
+@keyframes achPop{0%{transform:scale(.8);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+
+/* ── Login Page ── */
+.login-page{position:fixed;inset:0;z-index:999;background:linear-gradient(135deg,#E8F4FD 0%,#F0F6FB 50%,#DBEAFE 100%);display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{width:100%;max-width:380px;background:#fff;border-radius:20px;padding:36px 28px;box-shadow:0 20px 60px rgba(46,134,193,.12)}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo .ll-ico{font-size:42px;margin-bottom:8px}
+.login-logo .ll-title{font-size:24px;font-weight:900;letter-spacing:-1px;color:var(--text)}
+.login-logo .ll-sub{font-size:13px;color:var(--accent);font-weight:500;margin-top:2px}
+.login-tabs{display:flex;gap:4px;background:var(--bg);border-radius:var(--Rs);padding:3px;margin-bottom:20px}
+.login-tab{flex:1;padding:9px;text-align:center;font-size:14px;font-weight:500;border-radius:7px;cursor:pointer;border:none;font-family:inherit;background:transparent;color:var(--text2);transition:.2s}
+.login-tab.active{background:#fff;color:var(--text);box-shadow:var(--shadow);font-weight:600}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px}
+.login-field input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;transition:.2s}
+.login-field input:focus{border-color:var(--accent);background:#fff}
+.login-btn{width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;border:none;background:var(--accent);color:#fff;transition:.2s;margin-top:6px}
+.login-btn:active{transform:scale(.97)}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-msg{text-align:center;font-size:12px;margin-top:12px;min-height:18px}
+.login-msg.err{color:var(--s-rejected)}
+.login-msg.ok{color:var(--s-offer)}
+.login-skip{text-align:center;margin-top:16px;font-size:12px;color:var(--text3)}
+.login-skip a{color:var(--accent);cursor:pointer;font-weight:500}
+.login-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--text3);font-size:11px}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── User Avatar in Header ── */
+.user-avatar{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--border);background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;transition:.2s}
+.user-avatar:active{transform:scale(.9)}
+.sync-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;border:2px solid #fff}
+.sync-dot.synced{background:var(--s-offer)}
+.sync-dot.syncing{background:var(--s-r1);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── AI Module ── */
+.ai-tabs{display:flex;gap:4px;margin-bottom:14px;background:var(--bg);border-radius:var(--Rs);padding:3px}
+.ai-tab{flex:1;padding:8px 4px;text-align:center;font-size:12px;font-weight:500;border-radius:7px;cursor:pointer;border:none;font-family:inherit;background:transparent;color:var(--text2);transition:.2s}
+.ai-tab.active{background:var(--card);color:var(--text);box-shadow:var(--shadow);font-weight:600}
+.ai-panel{display:none}
+.ai-panel.show{display:block;animation:fadeIn .2s}
+.ai-input-group{margin-bottom:12px}
+.ai-input-group label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px}
+.ai-input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);outline:none;transition:.2s}
+.ai-input:focus{border-color:var(--accent)}
+.ai-btn{width:100%;padding:12px;border-radius:var(--Rs);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;border:none;background:linear-gradient(135deg,#2E86C1,#3498DB);color:#fff;transition:.2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.ai-btn:active{transform:scale(.97)}
+.ai-btn:disabled{opacity:.5;cursor:not-allowed}
+.ai-result{margin-top:14px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--Rs);font-size:13px;color:var(--text);line-height:1.8;word-break:break-word;max-height:50vh;overflow-y:auto}
+.ai-result b{font-weight:600;color:var(--text)}
+.ai-result .ai-loading{text-align:center;padding:20px;color:var(--text3)}
+.ai-result .ai-loading .dots{display:inline-block;animation:dotPulse 1.5s infinite}
+@keyframes dotPulse{0%,100%{opacity:.3}50%{opacity:1}}
+.ai-nokey{text-align:center;padding:20px;background:#FEF3C7;border-radius:var(--Rs);font-size:13px;color:#92400E;line-height:1.6}
+.ai-nokey a{color:#92400E;font-weight:600;text-decoration:underline;cursor:pointer}
+.ai-select{width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);outline:none}
+</style>
+</head>
+<body>
+
+<!-- ══ Login Page ══ -->
+<div class="login-page" id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="ll-ico">🚀</div>
+      <div class="ll-title">启程录</div>
+      <div class="ll-sub">每一次投递，都是新的启程</div>
+    </div>
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="switchLoginTab('login',this)">登录</button>
+      <button class="login-tab" onclick="switchLoginTab('register',this)">注册</button>
+    </div>
+    <div id="loginForm">
+      <div class="login-field"><label>邮箱</label><input type="email" id="auth_email" placeholder="your@email.com"></div>
+      <div class="login-field"><label>密码</label><input type="password" id="auth_pass" placeholder="至少6位"></div>
+      <button class="login-btn" id="authBtn" onclick="doAuth()">登录</button>
+      <div class="login-msg" id="authMsg"></div>
+    </div>
+    <div class="login-divider">或</div>
+    <div class="login-skip">不想注册？<a onclick="skipLogin()">以离线模式使用</a><br><span style="color:var(--text3);font-size:11px">（数据仅存在当前浏览器，不可云同步）</span></div>
+  </div>
+</div>
+
+<!-- ══ Pages ══ -->
+<div class="page active" id="pg-board">
+  <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
+    <div><div class="page-title">启程录</div><div class="page-sub" style="color:var(--accent);font-weight:500;font-size:11px;letter-spacing:1px">每一次投递，都是新的启程</div><div class="page-sub" id="boardSub"></div></div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="hd-btn" onclick="openAI()" title="AI 助手">✨</button>
+      <button class="hd-btn" onclick="openAchieve()" title="成就">🏆</button>
+      <button class="hd-btn" onclick="showGuide()" title="使用说明">❓</button>
+      <button class="hd-btn" onclick="openSett()" title="设置 / 数据备份">⚙️</button>
+      <div id="userBtn" style="position:relative;display:none"><div class="user-avatar" onclick="openSett()" id="userAvatar"></div><div class="sync-dot synced" id="syncDot"></div></div>
+    </div>
+  </div>
+  <div id="welcomeBanner"></div>
+  <div id="backupBanner"></div>
+  <div class="season-bar" id="seasonBar"></div>
+  <div class="stats-row" id="statsRow"></div>
+  <div class="kanban-wrap">
+    <div class="kanban" id="kanbanView"></div>
+    <div class="kanban-hint" id="kanbanHint">← 左右滑动查看更多状态 <span class="arrow">→</span></div>
+  </div>
+</div>
+
+<div class="page" id="pg-list">
+  <div class="page-header"><div class="page-title">全部投递</div></div>
+  <div style="padding:10px 16px 4px"><input class="search-box" id="listSearch" placeholder="🔍 搜索公司、岗位、城市..." oninput="renderListPage()"></div>
+  <div class="filter-bar" id="listFilters"></div>
+  <div class="list-wrap" id="listContent"></div>
+</div>
+
+<div class="page" id="pg-cal">
+  <div class="page-header"><div class="page-title">面试日历</div></div>
+  <div class="cal-nav">
+    <button class="cal-nav-btn" onclick="calNav(-1)">◀</button>
+    <div class="cal-nav-title" id="calTitle"></div>
+    <button class="cal-nav-btn" onclick="calNav(1)">▶</button>
+  </div>
+  <div id="calGrid"></div>
+  <div class="cal-events" id="calEvents"></div>
+</div>
+
+<div class="page" id="pg-notes">
+  <div class="page-header"><div class="page-title">面经本</div><div class="page-sub">所有面试记录与面经汇总</div></div>
+  <div style="padding:10px 16px 4px"><input class="search-box" id="noteSearch" placeholder="🔍 搜索面经内容..." oninput="renderNotesPage()"></div>
+  <div class="notes-list" id="notesList"></div>
+</div>
+
+<div class="page" id="pg-stats">
+  <div class="page-header"><div class="page-title">数据统计</div></div>
+  <div class="charts-wrap" id="chartsWrap"></div>
+</div>
+
+<!-- ══ Bottom Tabs ══ -->
+<div class="tab-bar">
+  <button class="tab-item active" onclick="switchPage('board',this)"><span class="ico">📋</span>看板</button>
+  <button class="tab-item" onclick="switchPage('list',this)"><span class="ico">📃</span>列表</button>
+  <button class="tab-item" onclick="switchPage('cal',this)"><span class="ico">📅</span>日历</button>
+  <button class="tab-item" onclick="switchPage('notes',this)"><span class="ico">📝</span>面经</button>
+  <button class="tab-item" onclick="switchPage('stats',this)"><span class="ico">📊</span>统计</button>
+</div>
+
+<!-- FAB -->
+<button class="fab" onclick="openEditor()">+</button>
+
+<!-- ══ Editor Modal ══ -->
+<div class="modal-overlay" id="editorModal">
+<div class="modal">
+  <div class="m-hd"><h2 id="editorTitle">新增投递</h2><button class="m-close" onclick="closeEditor()">✕</button></div>
+  <div class="m-body">
+    <div class="fs"><div class="fs-t">基本信息</div>
+      <div class="fr"><div class="ff"><label>公司名称 *</label><input id="f_co" placeholder="如 字节跳动"></div>
+        <div class="ff"><label>公司类型</label><select id="f_ct"><option value="">选择</option><option>互联网</option><option>国企</option><option>央企</option><option>外企</option><option>银行</option><option>券商</option><option>基金</option><option>咨询</option><option>律所</option><option>事务所</option><option>其他</option></select></div></div>
+      <div class="fr"><div class="ff"><label>部门</label><input id="f_dept" placeholder="如 法务部"></div>
+        <div class="ff"><label>岗位名称</label><input id="f_pos" placeholder="如 法务实习生"></div></div>
+      <div class="fr"><div class="ff"><label>城市</label><input id="f_city" placeholder="如 北京" list="cityList"><datalist id="cityList"></datalist></div>
+        <div class="ff"><label>求职季</label><select id="f_season"></select></div></div>
+    </div>
+    <div class="fs"><div class="fs-t">投递信息</div>
+      <div class="fr"><div class="ff"><label>投递日期</label><input type="date" id="f_date"></div>
+        <div class="ff"><label>网申截止</label><input type="date" id="f_ddl"></div></div>
+      <div class="fr"><div class="ff"><label>投递渠道</label><select id="f_plat"><option value="">选择</option><option>官网</option><option>BOSS直聘</option><option>牛客</option><option>实习僧</option><option>智联招聘</option><option>前程无忧</option><option>公众号</option><option>邮箱投递</option><option>内推</option><option>其他</option></select></div>
+        <div class="ff"><label>内推人</label><input id="f_ref" placeholder="如有内推"></div></div>
+      <div class="fr"><div class="ff"><label>投递/官网链接</label><div style="display:flex;gap:6px"><input type="url" id="f_url" placeholder="https://..." style="flex:1"><button id="f_url_open" onclick="const u=document.getElementById('f_url').value;if(u)window.open(u,'_blank')" style="flex-shrink:0;padding:0 12px;border-radius:7px;border:1.5px solid var(--border);background:var(--card);font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap">🔗 打开</button></div></div></div>
+    </div>
+    <div class="fs"><div class="fs-t">当前状态</div><div class="status-grid" id="statusGrid"></div></div>
+    <div class="fs"><div class="fs-t">面试记录</div>
+      <div id="ivList"></div>
+      <button class="add-iv" onclick="addIV()">+ 添加一轮面试</button>
+    </div>
+    <div class="fs"><div class="fs-t">备注</div><div class="ff"><textarea id="f_notes" placeholder="其他想记录的..." rows="3"></textarea></div></div>
+  </div>
+  <div class="m-actions">
+    <button class="btn btn-s" onclick="closeEditor()">取消</button>
+    <button class="btn btn-d" id="delBtn" onclick="delEntry()" style="display:none">删除</button>
+    <button class="btn btn-p" onclick="saveEntry()">保存</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ Settings Modal ══ -->
+<div class="modal-overlay" id="settingsModal">
+<div class="modal">
+  <div class="m-hd"><h2>设置</h2><button class="m-close" onclick="closeSett()">✕</button></div>
+  <div class="m-body">
+    <div class="fs" id="settAccountSection" style="display:none">
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:10px">账户</h3>
+      <div style="padding:12px;background:var(--card);border:1px solid var(--border);border-radius:var(--Rs);margin-bottom:6px;display:flex;align-items:center;gap:10px">
+        <div class="user-avatar" style="cursor:default" id="settAvatar"></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:600" id="settEmail"></div><div style="font-size:11px;color:var(--s-offer)">☁️ 数据已云同步</div></div>
+        <button onclick="doLogout()" style="padding:6px 14px;border-radius:7px;background:#FEF2F2;color:#DC2626;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:inherit">退出</button>
+      </div>
+    </div>
+    <div class="fs"><h3 style="font-size:14px;font-weight:600;margin-bottom:10px">AI 助手设置</h3>
+      <div style="margin-bottom:8px">
+        <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">AI 服务商</label>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button id="provBtn_deepseek" onclick="setProvider('deepseek')" style="flex:1;padding:10px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;border:2px solid var(--border);background:var(--card);transition:.2s">🐋 DeepSeek</button>
+          <button id="provBtn_qwen" onclick="setProvider('qwen')" style="flex:1;padding:10px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;border:2px solid var(--border);background:var(--card);transition:.2s">☁️ 通义千问</button>
+        </div>
+        <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">API Key</label>
+        <input class="ai-input" id="apiKeyInput" type="password" placeholder="sk-..." style="font-size:13px">
+        <div id="providerHint" style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
+          <button onclick="saveAPIKey()" style="padding:8px 16px;border-radius:7px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit">保存</button>
+          <button onclick="clearAPIKey()" style="padding:8px 16px;border-radius:7px;background:var(--bg);color:var(--text2);font-size:13px;font-weight:500;border:1px solid var(--border);cursor:pointer;font-family:inherit">清除</button>
+          <button id="balanceBtn" onclick="checkBalance()" style="padding:8px 16px;border-radius:7px;background:var(--bg);color:var(--accent);font-size:13px;font-weight:500;border:1px solid var(--border);cursor:pointer;font-family:inherit">💰 查询余额</button>
+          <span id="apiKeyStatus" style="font-size:12px;color:var(--s-offer);display:flex;align-items:center"></span>
+        </div>
+        <div id="balanceInfo" style="display:none;margin-top:8px;padding:8px 12px;background:var(--accent-light);border-radius:7px;font-size:12px;color:var(--accent)"></div>
+      </div>
+    </div>
+    <div class="fs"><h3 style="font-size:14px;font-weight:600;margin-bottom:10px">数据管理</h3>
+      <button class="sett-btn" onclick="exportJSON()" style="width:100%;padding:12px;border-radius:var(--Rs);border:1.5px solid var(--border);background:var(--card);font-size:13px;font-family:inherit;text-align:left;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">💾</span><div><b>导出备份 (JSON)</b><br><span style="font-size:11px;color:var(--text3)">完整数据，可无损导入恢复</span></div></button>
+      <button class="sett-btn" onclick="document.getElementById('impFile').click()" style="width:100%;padding:12px;border-radius:var(--Rs);border:1.5px solid var(--border);background:var(--card);font-size:13px;font-family:inherit;text-align:left;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">📂</span><div><b>导入备份</b><br><span style="font-size:11px;color:var(--text3)">从 JSON 文件恢复，自动兼容旧版本</span></div></button>
+      <input type="file" id="impFile" accept=".json" style="display:none" onchange="importJSON(event)">
+      <button class="sett-btn" onclick="exportCSV()" style="width:100%;padding:12px;border-radius:var(--Rs);border:1.5px solid var(--border);background:var(--card);font-size:13px;font-family:inherit;text-align:left;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">📊</span><div><b>导出 CSV</b><br><span style="font-size:11px;color:var(--text3)">可在 Excel 中查看</span></div></button>
+    </div>
+    <div class="fs"><h3 style="font-size:14px;font-weight:600;margin-bottom:10px">其他</h3>
+      <button onclick="clearAll()" style="width:100%;padding:12px;border-radius:var(--Rs);border:1.5px solid #FCA5A5;background:#FEF2F2;font-size:13px;font-family:inherit;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">🗑️</span><div><b style="color:#DC2626">清空所有数据</b><br><span style="font-size:11px;color:var(--text3)">不可撤销，请先备份</span></div></button>
+    </div>
+    <div style="text-align:center;padding:20px;color:var(--text3);font-size:11px">启程录 v5.0 · 登录后数据云同步<br>AI 功能支持 DeepSeek / 通义千问</div>
+  </div>
+</div>
+</div>
+
+<!-- ══ Achievement Modal ══ -->
+<div class="modal-overlay" id="achModal">
+<div class="modal">
+  <div class="m-hd"><h2>🏆 成就</h2><button class="m-close" onclick="closeAchieve()">✕</button></div>
+  <div class="m-body">
+    <div class="ach-summary" id="achSummary"></div>
+    <div class="ach-grid" id="achGrid"></div>
+  </div>
+</div>
+</div>
+
+<!-- ══ AI Assistant Modal ══ -->
+<div class="modal-overlay" id="aiModal">
+<div class="modal">
+  <div class="m-hd"><h2>✨ AI 助手</h2><button class="m-close" onclick="closeAI()">✕</button></div>
+  <div class="m-body">
+    <div class="ai-tabs">
+      <button class="ai-tab active" onclick="switchAITab('search',this)">🔍 面经搜索</button>
+      <button class="ai-tab" onclick="switchAITab('review',this)">🤖 面试复盘</button>
+      <button class="ai-tab" onclick="switchAITab('weekly',this)">📊 周报</button>
+    </div>
+
+    <!-- 面经搜索 -->
+    <div class="ai-panel show" id="ai-search">
+      <div class="ai-input-group"><label>公司名称</label><input class="ai-input" id="ai_s_co" placeholder="如 字节跳动"></div>
+      <div class="ai-input-group"><label>岗位名称</label><input class="ai-input" id="ai_s_pos" placeholder="如 法务实习生"></div>
+      <button class="ai-btn" onclick="aiSearch()">🔍 搜索面经 & 备战建议</button>
+      <div class="ai-result" id="ai_s_result" style="display:none"></div>
+    </div>
+
+    <!-- 面试复盘 -->
+    <div class="ai-panel" id="ai-review">
+      <div class="ai-input-group"><label>选择一条面试记录</label>
+        <select class="ai-select" id="ai_r_select"><option value="">请选择...</option></select>
+      </div>
+      <div id="ai_r_preview" style="display:none;margin-bottom:12px;padding:10px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:150px;overflow-y:auto"></div>
+      <button class="ai-btn" onclick="aiReview()">🤖 AI 复盘分析</button>
+      <div class="ai-result" id="ai_r_result" style="display:none"></div>
+    </div>
+
+    <!-- 智能周报 -->
+    <div class="ai-panel" id="ai-weekly">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">基于你当前所有投递和面试数据，AI 为你生成本周求职进度总结与下周行动建议。</p>
+      <button class="ai-btn" onclick="aiWeekly()">📊 生成智能周报</button>
+      <div class="ai-result" id="ai_w_result" style="display:none"></div>
+    </div>
+
+    <!-- API Key Notice -->
+    <div id="aiKeyNotice" style="margin-top:14px"></div>
+  </div>
+</div>
+</div>
+
+<!-- ══ Guide Modal ══ -->
+<div class="modal-overlay" id="guideModal">
+<div class="modal">
+  <div class="m-hd"><h2>📖 使用说明</h2><button class="m-close" onclick="closeGuide()">✕</button></div>
+  <div class="m-body">
+    <div class="guide-section">
+      <h3>📋 看板</h3>
+      <p>所有投递按状态分列显示，从"待投递"到"Offer/被挂/已拒"，左右滑动查看所有列。顶部可按<b>求职季</b>（暑期实习/秋招/春招）切换筛选。</p>
+    </div>
+    <div class="guide-section">
+      <h3>📃 列表</h3>
+      <p>全部投递的列表视图，支持<b>搜索</b>和按企业类型/城市<b>快速筛选</b>。点击任意记录可编辑详情。</p>
+    </div>
+    <div class="guide-section">
+      <h3>📅 日历</h3>
+      <p>以月历形式展示所有<b>面试安排</b>。面试日期会在日历上标点，点击查看当天详情。在每条投递里添加面试记录时填写日期即可。</p>
+    </div>
+    <div class="guide-section">
+      <h3>📝 面经</h3>
+      <p>自动汇总所有面试轮次中写过的面经笔记，按时间倒序排列，支持搜索。不用一个个点进投递记录去翻了。</p>
+    </div>
+    <div class="guide-section">
+      <h3>📊 统计</h3>
+      <p>可视化查看投递进度分布、企业类型饼图、城市分布饼图，以及各求职季投递量对比。</p>
+    </div>
+    <div class="guide-section">
+      <h3>➕ 新增投递</h3>
+      <p>点右下角 <b>+</b> 按钮新增。只需填公司名就能保存，其余字段按需填写。每条投递可以添加多轮面试记录（含面经和该轮结果），并可记录投递链接方便跳转官网查看进度。</p>
+    </div>
+    <div class="guide-section">
+      <h3>✨ AI 助手</h3>
+      <p>点右上角 ✨ 打开。包含三个功能：<b>面经搜索</b>（输入公司+岗位，AI 帮你分析常见面试问题和备战要点）、<b>面试复盘</b>（选择一条面经，AI 分析你的薄弱点并给改进建议）、<b>智能周报</b>（AI 根据你的全部数据生成求职进度总结和行动建议）。</p>
+      <div class="guide-tip">使用 AI 功能需要在 ⚙️ 设置中选择服务商（DeepSeek 或 通义千问）并填入对应的 API Key。Key 仅存在你的浏览器里，不会泄露。</div>
+    </div>
+    <div class="guide-section">
+      <h3>🏆 成就</h3>
+      <p>点右上角 🏆 查看。系统会根据你的投递和面试数据自动解锁成就徽章，给枯燥的求职旅程加点乐趣。</p>
+    </div>
+    <div class="guide-section">
+      <h3>⚙️ 账户与数据</h3>
+      <p>注册登录后，数据自动同步到云端，换设备也不怕丢。未登录时以离线模式使用，数据仅存在当前浏览器。设置中可导出/导入 JSON 备份、管理账户。</p>
+      <div class="guide-tip">
+        即使登录了账户，仍建议偶尔导出 JSON 备份以防万一。
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ Day Events Modal ══ -->
+<div class="modal-overlay" id="dayModal">
+<div class="modal">
+  <div class="m-hd"><h2 id="dayModalTitle">面试安排</h2><button class="m-close" onclick="closeDayModal()">✕</button></div>
+  <div class="m-body" id="dayModalBody"></div>
+</div>
+</div>
+
+<script>
+// ═══════ Config ═══════
+const DATA_VERSION = 2;
+const STATUSES = [
+  {k:'todo',l:'待投递',c:'var(--s-todo)'},
+  {k:'applied',l:'已投递',c:'var(--s-applied)'},
+  {k:'written',l:'笔试',c:'var(--s-written)'},
+  {k:'round1',l:'一面',c:'var(--s-r1)'},
+  {k:'round2',l:'二面',c:'var(--s-r2)'},
+  {k:'round3',l:'三面',c:'var(--s-r3)'},
+  {k:'hr',l:'HR面',c:'var(--s-hr)'},
+  {k:'offer',l:'Offer',c:'var(--s-offer)'},
+  {k:'hung',l:'被挂',c:'var(--s-hung)'},
+  {k:'rejected',l:'已拒',c:'var(--s-rejected)'},
+  {k:'withdrawn',l:'放弃',c:'var(--s-withdrawn)'},
+];
+const SM = Object.fromEntries(STATUSES.map(s=>[s.k,s]));
+const IV_ROUNDS = ['笔试','一面','二面','三面','HR面','加面','终面'];
+const IV_RESULTS = [
+  {k:'pending',l:'待定',c:'var(--s-applied)'},
+  {k:'passed',l:'通过',c:'var(--s-offer)'},
+  {k:'failed',l:'挂了',c:'var(--s-rejected)'},
+];
+const SEASONS_DEFAULT = ['暑期实习2026','秋招2026','春招2027'];
+const CITIES_DEFAULT = ['北京','上海','深圳','广州','杭州','成都','南京','武汉','西安','重庆','苏州','天津','厦门','长沙','合肥'];
+const TYPE_COLORS = {'互联网':'#3B82F6','国企':'#EF4444','央企':'#DC2626','外企':'#8B5CF6','银行':'#F59E0B','券商':'#EC4899','基金':'#14B8A6','咨询':'#6366F1','律所':'#78716C','事务所':'#A3A3A3','其他':'#9CA3AF'};
+
+// ═══════ State ═══════
+let entries = [], editId = null, tmpIV = [], curSeason = '全部', curPage = 'board';
+let calYear, calMonth, listFilter = {type:'',city:'',season:''};
+
+// ═══════ Supabase Init ═══════
+const SUPABASE_URL='https://zzjoqfwyrjfbgkowompm.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6am9xZnd5cmpmYmdrb3dvbXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NjQ0MzUsImV4cCI6MjA4NzM0MDQzNX0.XuYBmpmlwYkXndNeeXRE09JoVpOq77ZNXOpYq8q2Puc';
+const sb=window.supabase?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+let currentUser=null;
+let offlineMode=false;
+
+// ═══════ Auth ═══════
+function switchLoginTab(tab,el){
+  document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('authBtn').textContent=tab==='login'?'登录':'注册';
+  document.getElementById('authMsg').textContent='';
+}
+async function doAuth(){
+  const email=document.getElementById('auth_email').value.trim();
+  const pass=document.getElementById('auth_pass').value;
+  const isLogin=document.getElementById('authBtn').textContent==='登录';
+  const msg=document.getElementById('authMsg');
+  if(!email||!pass){msg.className='login-msg err';msg.textContent='请填写邮箱和密码';return;}
+  if(pass.length<6){msg.className='login-msg err';msg.textContent='密码至少6位';return;}
+  document.getElementById('authBtn').disabled=true;
+  msg.className='login-msg';msg.textContent='处理中...';
+  try{
+    let result;
+    if(isLogin){
+      result=await sb.auth.signInWithPassword({email,password:pass});
+    }else{
+      result=await sb.auth.signUp({email,password:pass});
+    }
+    if(result.error) throw result.error;
+    if(!isLogin && !result.data.session){
+      msg.className='login-msg ok';msg.textContent='注册成功！请查收验证邮件，验证后即可登录';
+      document.getElementById('authBtn').disabled=false;
+      return;
+    }
+    currentUser=result.data.user;
+    await enterApp();
+  }catch(err){
+    msg.className='login-msg err';
+    msg.textContent=err.message==='Invalid login credentials'?'邮箱或密码错误':err.message;
+  }
+  document.getElementById('authBtn').disabled=false;
+}
+function skipLogin(){
+  offlineMode=true;
+  currentUser=null;
+  enterApp();
+}
+async function doLogout(){
+  if(!confirm('确定退出登录？数据已保存在云端。'))return;
+  await sb.auth.signOut();
+  currentUser=null;offlineMode=false;
+  entries=[];
+  localStorage.removeItem('jt_v2');
+  location.reload();
+}
+async function enterApp(){
+  document.getElementById('loginPage').style.display='none';
+  loadDataLocal();
+  if(currentUser&&!offlineMode){
+    await pullFromCloud();
+    updateUserUI();
+  }
+  renderBoard();renderWelcome();setTimeout(initKanbanHint,500);
+}
+function updateUserUI(){
+  if(currentUser){
+    const initial=currentUser.email?currentUser.email[0].toUpperCase():'U';
+    document.getElementById('userBtn').style.display='block';
+    document.getElementById('userAvatar').textContent=initial;
+    document.getElementById('settAccountSection').style.display='block';
+    document.getElementById('settAvatar').textContent=initial;
+    document.getElementById('settEmail').textContent=currentUser.email;
+  }else{
+    document.getElementById('userBtn').style.display='none';
+    document.getElementById('settAccountSection').style.display='none';
+  }
+}
+
+// ═══════ Data Layer ═══════
+function loadDataLocal(){
+  try{
+    const raw=localStorage.getItem('jt_v2');
+    if(raw){const d=JSON.parse(raw);entries=d.entries||[];}
+    else{
+      const v1=localStorage.getItem('jobtracker_data');
+      if(v1){entries=JSON.parse(v1);entries.forEach(e=>{if(!e.season)e.season='秋招2026';});saveDataLocal();}
+    }
+  }catch(e){entries=[];}
+}
+function saveDataLocal(){
+  localStorage.setItem('jt_v2',JSON.stringify({version:DATA_VERSION,exportedAt:Date.now(),entries}));
+  localStorage.setItem('jt_lastSave',Date.now().toString());
+}
+async function saveData(){
+  saveDataLocal();
+  if(currentUser&&!offlineMode) await pushToCloud();
+}
+function setSyncStatus(status){
+  const dot=document.getElementById('syncDot');
+  if(!dot)return;
+  dot.className='sync-dot '+status;
+}
+
+// ═══════ Cloud Sync ═══════
+async function pullFromCloud(){
+  if(!sb||!currentUser)return;
+  setSyncStatus('syncing');
+  try{
+    const{data,error}=await sb.from('entries').select('id,data,updated_at').eq('user_id',currentUser.id);
+    if(error)throw error;
+    if(!data||!data.length){
+      // First time: push local data to cloud
+      if(entries.length) await pushToCloud();
+      setSyncStatus('synced');
+      return;
+    }
+    // Merge: cloud wins if newer
+    const cloudMap=new Map(data.map(r=>[(r.data.id||r.id),{...r.data,_cloudUpdated:r.updated_at}]));
+    const localMap=new Map(entries.map(e=>[e.id,e]));
+    const merged=[];
+    // All cloud entries
+    cloudMap.forEach((ce,id)=>{
+      const le=localMap.get(id);
+      if(!le||(ce.updatedAt||0)>=(le.updatedAt||0)) merged.push(ce);
+      else merged.push(le);
+      localMap.delete(id);
+    });
+    // Remaining local-only entries
+    localMap.forEach(le=>merged.push(le));
+    entries=merged;
+    saveDataLocal();
+    // Push any local-only entries to cloud
+    const cloudIds=new Set(data.map(r=>r.data.id||r.id));
+    const localOnly=entries.filter(e=>!cloudIds.has(e.id));
+    if(localOnly.length) await pushEntries(localOnly);
+    // Also pull settings
+    await pullSettings();
+    setSyncStatus('synced');
+  }catch(err){
+    console.error('Pull failed:',err);
+    setSyncStatus('synced');
+  }
+}
+async function pushToCloud(){
+  if(!sb||!currentUser)return;
+  setSyncStatus('syncing');
+  try{
+    await pushEntries(entries);
+    // Remove cloud entries that no longer exist locally
+    const{data:cloudRows}=await sb.from('entries').select('id').eq('user_id',currentUser.id);
+    if(cloudRows){
+      const localIds=new Set(entries.map(e=>e.id));
+      const toDelete=cloudRows.filter(r=>!localIds.has(r.id)).map(r=>r.id);
+      if(toDelete.length) await sb.from('entries').delete().in('id',toDelete);
+    }
+    await pushSettings();
+    setSyncStatus('synced');
+  }catch(err){
+    console.error('Push failed:',err);
+    setSyncStatus('synced');
+  }
+}
+async function pushEntries(ents){
+  if(!ents.length)return;
+  const rows=ents.map(e=>({id:e.id,user_id:currentUser.id,data:e,updated_at:e.updatedAt||0}));
+  // Upsert in batches of 50
+  for(let i=0;i<rows.length;i+=50){
+    const batch=rows.slice(i,i+50);
+    await sb.from('entries').upsert(batch,{onConflict:'id'});
+  }
+}
+async function pullSettings(){
+  try{
+    const{data}=await sb.from('user_settings').select('settings').eq('user_id',currentUser.id).single();
+    if(data&&data.settings){
+      const s=data.settings;
+      if(s.provider) localStorage.setItem('jt_provider',s.provider);
+      if(s.apikey_deepseek) localStorage.setItem('jt_apikey_deepseek',s.apikey_deepseek);
+      if(s.apikey_qwen) localStorage.setItem('jt_apikey_qwen',s.apikey_qwen);
+    }
+  }catch(e){}
+}
+async function pushSettings(){
+  try{
+    const settings={
+      provider:getProvider(),
+      apikey_deepseek:localStorage.getItem('jt_apikey_deepseek')||'',
+      apikey_qwen:localStorage.getItem('jt_apikey_qwen')||'',
+    };
+    await sb.from('user_settings').upsert({user_id:currentUser.id,settings,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+  }catch(e){}
+}
+function migrateImport(data){
+  if(Array.isArray(data)){data.forEach(e=>{if(!e.season)e.season='秋招2026';if(!e.interviews)e.interviews=[];e.interviews.forEach(iv=>{if(!iv.result)iv.result='pending';});});return data;}
+  if(data.entries)return migrateImport(data.entries);
+  return [];
+}
+
+// ═══════ Filtered ═══════
+function filtered(){ return curSeason==='全部' ? entries : entries.filter(e=>e.season===curSeason); }
+
+// ═══════ Page Switch ═══════
+function switchPage(pg, el){
+  curPage=pg;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pg-'+pg).classList.add('active');
+  document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(pg==='board') renderBoard();
+  else if(pg==='list') renderListPage();
+  else if(pg==='cal') renderCalPage();
+  else if(pg==='notes') renderNotesPage();
+  else if(pg==='stats') renderStatsPage();
+}
+
+// ═══════ BOARD PAGE ═══════
+function renderBoard(){
+  renderSeasons(); renderStats(); renderKanban(); renderBackupBanner(); renderWelcome();
+  const f=filtered();
+  document.getElementById('boardSub').textContent=`共 ${f.length} 条投递记录`;
+}
+function renderSeasons(){
+  const seasons = [...new Set(entries.map(e=>e.season).filter(Boolean))];
+  SEASONS_DEFAULT.forEach(s=>{ if(!seasons.includes(s)) seasons.push(s); });
+  const bar = document.getElementById('seasonBar');
+  bar.innerHTML = `<button class="season-chip ${curSeason==='全部'?'active':''}" onclick="setSeason('全部')">全部</button>` +
+    seasons.map(s=>`<button class="season-chip ${curSeason===s?'active':''}" onclick="setSeason('${s}')">${s}</button>`).join('');
+  // Also fill season select in editor
+  const sel = document.getElementById('f_season');
+  if(sel) sel.innerHTML = seasons.map(s=>`<option>${s}</option>`).join('');
+}
+function setSeason(s){ curSeason=s; renderBoard(); }
+function renderStats(){
+  const f=filtered(), total=f.length, applied=f.filter(e=>e.status!=='todo').length;
+  const offer=f.filter(e=>e.status==='offer').length;
+  const iv=f.filter(e=>['round1','round2','round3','hr'].includes(e.status)).length;
+  const rej=f.filter(e=>e.status==='rejected'||e.status==='hung').length;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="s-pill accent"><span class="n">${total}</span>总计</div>
+    <div class="s-pill"><span class="n" style="color:var(--s-offer)">${offer}</span>Offer</div>
+    <div class="s-pill"><span class="n" style="color:var(--s-r1)">${iv}</span>面试中</div>
+    <div class="s-pill"><span class="n">${applied}</span>已投</div>
+    <div class="s-pill"><span class="n" style="color:var(--s-rejected)">${rej}</span>淘汰</div>
+    ${applied?`<div class="s-pill"><span class="n">${Math.round(offer/applied*100)}%</span>Offer率</div>`:''}`;
+}
+function renderKanban(){
+  const f=filtered();
+  const show=['todo','applied','written','round1','round2','round3','hr','offer','hung','rejected'];
+  const cols=STATUSES.filter(s=>show.includes(s.k)||(f.some(e=>e.status===s.k)));
+  document.getElementById('kanbanView').innerHTML=cols.map(s=>{
+    const items=f.filter(e=>e.status===s.k).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+    return `<div class="k-col"><div class="k-col-h"><span class="dot" style="background:${s.c}"></span>${s.l}<span class="cnt">${items.length}</span></div>
+      <div class="k-cards">${items.length?items.map(cardHTML).join(''):'<div style="padding:16px;text-align:center;color:var(--text3);font-size:11px">暂无</div>'}</div></div>`;
+  }).join('');
+}
+function cardHTML(it){
+  const hasNotes=it.interviews&&it.interviews.some(iv=>iv.notes&&iv.notes.trim());
+  const hasHung=it.interviews&&it.interviews.some(iv=>iv.result==='failed');
+  return `<div class="jc" onclick="openEditor('${it.id}')">
+    <div class="co">${it.company}${it.companyType?`<span class="tb">${it.companyType}</span>`:''}</div>
+    <div class="po">${[it.department,it.position].filter(Boolean).join(' · ')||'未填岗位'}</div>
+    <div class="tags">${it.city?`<span class="t city">${it.city}</span>`:''}${it.platform?`<span class="t plat">${it.platform}</span>`:''}${hasNotes?'<span class="t notes">有面经</span>':''}${hasHung?'<span class="t hung">有挂</span>':''}${it.url?`<span class="t" style="background:#DBEAFE;color:#1D4ED8;cursor:pointer" onclick="event.stopPropagation();window.open('${it.url}','_blank')">🔗 查看进度</span>`:''}</div>
+    ${it.applyDate?`<div class="dt">${it.applyDate}</div>`:''}
+  </div>`;
+}
+function renderBackupBanner(){
+  const el=document.getElementById('backupBanner');
+  // If logged in, no need for aggressive backup reminders
+  if(currentUser&&!offlineMode){el.innerHTML='';return;}
+  const last=parseInt(localStorage.getItem('jt_lastBackup')||'0');
+  const days=Math.floor((Date.now()-last)/86400000);
+  if(entries.length>0 && days>=7){
+    el.innerHTML=`<div class="backup-banner" onclick="openSett()">⚠️ 离线模式下已${last?days+'天':'很久'}未备份，建议导出或登录账户同步<span class="bb-x" onclick="event.stopPropagation();this.parentElement.style.display='none'">✕</span></div>`;
+  } else el.innerHTML='';
+}
+
+// ═══════ LIST PAGE ═══════
+function renderListPage(){
+  renderListFilters();
+  const q=(document.getElementById('listSearch')?.value||'').toLowerCase();
+  let data=[...entries].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  if(q) data=data.filter(e=>[e.company,e.position,e.city,e.department,e.companyType,e.platform,e.referrer,e.notes,e.season].some(v=>v&&v.toLowerCase().includes(q)));
+  if(listFilter.type) data=data.filter(e=>e.companyType===listFilter.type);
+  if(listFilter.city) data=data.filter(e=>e.city===listFilter.city);
+  if(listFilter.season) data=data.filter(e=>e.season===listFilter.season);
+  const c=document.getElementById('listContent');
+  if(!data.length){c.innerHTML='<div class="empty"><div class="ei">🔍</div><div class="es">没有匹配的记录</div></div>';return;}
+  c.innerHTML=data.map(it=>{
+    const s=SM[it.status]||SM.todo;
+    return `<div class="li" onclick="openEditor('${it.id}')"><div class="sd" style="background:${s.c}"></div>
+      <div class="inf"><div class="tp">${it.company}${it.position?' · '+it.position:''}</div>
+      <div class="bt">${[it.city,it.department,it.platform,it.season].filter(Boolean).join(' · ')}</div></div>
+      ${it.url?`<span style="font-size:16px;cursor:pointer;flex-shrink:0;padding:4px" onclick="event.stopPropagation();window.open('${it.url}','_blank')">🔗</span>`:''}
+      <div class="sl" style="background:${s.c}20;color:${s.c}">${s.l}</div></div>`;
+  }).join('');
+}
+function renderListFilters(){
+  const types=[...new Set(entries.map(e=>e.companyType).filter(Boolean))].sort();
+  const cities=[...new Set(entries.map(e=>e.city).filter(Boolean))].sort();
+  const seasons=[...new Set(entries.map(e=>e.season).filter(Boolean))].sort();
+  document.getElementById('listFilters').innerHTML=`
+    <span class="filter-label">筛选</span>
+    <select class="filter-select ${listFilter.type?'has-val':''}" onchange="listFilter.type=this.value;renderListPage()">
+      <option value="">企业类型</option>${types.map(t=>`<option ${listFilter.type===t?'selected':''}>${t}</option>`).join('')}
+    </select>
+    <select class="filter-select ${listFilter.city?'has-val':''}" onchange="listFilter.city=this.value;renderListPage()">
+      <option value="">城市</option>${cities.map(c=>`<option ${listFilter.city===c?'selected':''}>${c}</option>`).join('')}
+    </select>
+    <select class="filter-select ${listFilter.season?'has-val':''}" onchange="listFilter.season=this.value;renderListPage()">
+      <option value="">求职季</option>${seasons.map(s=>`<option ${listFilter.season===s?'selected':''}>${s}</option>`).join('')}
+    </select>
+    ${(listFilter.type||listFilter.city||listFilter.season)?`<span style="font-size:12px;color:var(--accent);cursor:pointer;font-weight:500;flex-shrink:0" onclick="listFilter={type:'',city:'',season:''};renderListPage()">清除</span>`:''}`;
+}
+function setListFilter(k,v){
+  if(k==='') listFilter={type:'',city:'',season:''};
+  else if(listFilter[k]===v) listFilter[k]='';
+  else listFilter[k]=v;
+  renderListPage();
+}
+
+// ═══════ CALENDAR PAGE ═══════
+function renderCalPage(){
+  if(!calYear){const d=new Date();calYear=d.getFullYear();calMonth=d.getMonth();}
+  document.getElementById('calTitle').textContent=`${calYear}年${calMonth+1}月`;
+  // Build calendar grid
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const today=new Date();const todayStr=today.toISOString().split('T')[0];
+  // Collect events per day
+  const events={};
+  entries.forEach(e=>{(e.interviews||[]).forEach(iv=>{
+    if(iv.date){if(!events[iv.date])events[iv.date]=[];events[iv.date].push({...iv,company:e.company,entryId:e.id});}
+  });});
+  const hds=['日','一','二','三','四','五','六'];
+  let html='<div class="cal-month"><div class="cal-grid">';
+  hds.forEach(h=>{html+=`<div class="cal-hd">${h}</div>`;});
+  for(let i=0;i<firstDay;i++) html+='<div class="cal-cell"></div>';
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=ds===todayStr;
+    const evts=events[ds]||[];
+    html+=`<div class="cal-cell cur-month${isToday?' today':''}${evts.length?' has-event':''}" ${evts.length?`onclick="showDayEvents('${ds}')"`:''}>${d}${evts.length?`<div class="cal-dots"><span class="cd" style="background:var(--accent);color:#fff;width:auto;height:auto;font-size:9px;padding:0 4px;border-radius:3px;font-weight:700">${evts.length}</span></div>`:''}
+    </div>`;
+  }
+  html+='</div></div>';
+  document.getElementById('calGrid').innerHTML=html;
+  // Show this month's upcoming events
+  const monthEvents=[];
+  Object.keys(events).sort().forEach(date=>{
+    if(date.startsWith(`${calYear}-${String(calMonth+1).padStart(2,'0')}`)){
+      events[date].forEach(ev=>monthEvents.push({...ev,date}));
+    }
+  });
+  document.getElementById('calEvents').innerHTML=monthEvents.length?
+    `<div style="padding:0 0 6px;font-size:13px;font-weight:600;color:var(--text2)">本月面试 (${monthEvents.length})</div>`+
+    monthEvents.map(ev=>{
+      const rc=IV_RESULTS.find(r=>r.k===ev.result);
+      return `<div class="cal-event" onclick="openEditor('${ev.entryId}')">
+        <span class="ce-round" style="background:var(--accent-light);color:var(--accent)">${ev.round||'面试'} ${ev.date}</span>
+        ${rc&&rc.k!=='pending'?`<span class="ce-round" style="background:${rc.c}20;color:${rc.c}">${rc.l}</span>`:''}
+        <div class="ce-co">${ev.company}</div></div>`;
+    }).join(''):'<div class="empty"><div class="ei">📅</div><div class="es">本月暂无面试安排</div></div>';
+}
+function calNav(dir){calMonth+=dir;if(calMonth<0){calMonth=11;calYear--;}if(calMonth>11){calMonth=0;calYear++;}renderCalPage();}
+function showDayEvents(date){
+  const evts=[];
+  entries.forEach(e=>{(e.interviews||[]).forEach(iv=>{if(iv.date===date)evts.push({...iv,company:e.company,position:e.position,entryId:e.id});});});
+  document.getElementById('dayModalTitle').textContent=date+' 面试安排';
+  document.getElementById('dayModalBody').innerHTML=evts.map(ev=>`
+    <div class="cal-event" onclick="closeDayModal();openEditor('${ev.entryId}')">
+      <span class="ce-round" style="background:var(--accent-light);color:var(--accent)">${ev.round||'面试'}</span>
+      <div class="ce-co">${ev.company}</div>
+      <div class="ce-po">${ev.position||''}</div>
+      ${ev.notes?`<div style="font-size:12px;color:var(--text2);margin-top:6px;background:var(--bg);padding:8px;border-radius:6px;white-space:pre-wrap">${ev.notes}</div>`:''}
+    </div>`).join('');
+  document.getElementById('dayModal').classList.add('show');
+}
+function closeDayModal(){document.getElementById('dayModal').classList.remove('show');}
+
+// ═══════ NOTES PAGE ═══════
+function renderNotesPage(){
+  const q=(document.getElementById('noteSearch')?.value||'').toLowerCase();
+  const allNotes=[];
+  entries.forEach(e=>{(e.interviews||[]).forEach((iv,ivIdx)=>{
+    if(iv.notes&&iv.notes.trim()){
+      allNotes.push({company:e.company,position:e.position,round:iv.round,date:iv.date,notes:iv.notes,result:iv.result,entryId:e.id,ivIdx,type:iv.type});
+    }
+  });});
+  allNotes.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  let data=allNotes;
+  if(q) data=data.filter(n=>[n.company,n.position,n.notes,n.round].some(v=>v&&v.toLowerCase().includes(q)));
+  const c=document.getElementById('notesList');
+  if(!data.length){c.innerHTML='<div class="note-empty">📝 还没有面经记录<br>在投递详情中添加面试记录即可</div>';return;}
+  c.innerHTML=data.map((n,i)=>{
+    const rc=IV_RESULTS.find(r=>r.k===n.result);
+    const uid=`note_${n.entryId}_${n.ivIdx}`;
+    return `<div class="note-card" id="nc_${uid}">
+      <div class="nc-header">
+        <span class="nc-co">${n.company}</span>
+        <span class="nc-round" style="background:var(--accent-light);color:var(--accent)">${n.round||'面试'}${n.type?' · '+n.type:''}</span>
+        ${rc?`<span class="nc-result" style="background:${rc.c}20;color:${rc.c}">${rc.l}</span>`:''}
+        <span class="nc-date">${n.date||''}</span>
+      </div>
+      <div id="body_${uid}" class="nc-body" onclick="startEditNote('${uid}','${n.entryId}',${n.ivIdx})">${escHTML(n.notes)}</div>
+      <div id="edit_${uid}" style="display:none">
+        <textarea class="nc-edit" id="ta_${uid}">${escHTML(n.notes)}</textarea>
+        <div class="nc-actions">
+          <button class="nc-btn save" onclick="saveNote('${uid}','${n.entryId}',${n.ivIdx})">保存</button>
+          <button class="nc-btn cancel" onclick="cancelEditNote('${uid}')">取消</button>
+          <button class="nc-btn edit" onclick="openEditor('${n.entryId}')">打开完整记录</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function startEditNote(uid,entryId,ivIdx){
+  // Get current text from data (not DOM) to avoid stale content
+  const entry=entries.find(e=>e.id===entryId);
+  if(!entry)return;
+  const iv=entry.interviews[ivIdx];
+  if(!iv)return;
+  document.getElementById('body_'+uid).style.display='none';
+  document.getElementById('edit_'+uid).style.display='block';
+  const ta=document.getElementById('ta_'+uid);
+  ta.value=iv.notes||'';
+  ta.focus();
+  // Auto-resize
+  ta.style.height='auto';
+  ta.style.height=Math.max(ta.scrollHeight,100)+'px';
+  ta.oninput=function(){this.style.height='auto';this.style.height=Math.max(this.scrollHeight,100)+'px';};
+}
+function cancelEditNote(uid){
+  document.getElementById('body_'+uid).style.display='block';
+  document.getElementById('edit_'+uid).style.display='none';
+}
+function saveNote(uid,entryId,ivIdx){
+  const ta=document.getElementById('ta_'+uid);
+  const entry=entries.find(e=>e.id===entryId);
+  if(!entry||!entry.interviews[ivIdx])return;
+  entry.interviews[ivIdx].notes=ta.value;
+  entry.updatedAt=Date.now();
+  saveData();
+  // Update the display text in place without full re-render
+  document.getElementById('body_'+uid).textContent=ta.value;
+  cancelEditNote(uid);
+}
+function escHTML(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ═══════ STATS PAGE ═══════
+function renderStatsPage(){
+  const f=filtered();
+  let html='';
+  // 1. Status funnel
+  const statusCounts=STATUSES.map(s=>({...s,count:f.filter(e=>e.status===s.k).length})).filter(s=>s.count>0);
+  const maxC=Math.max(...statusCounts.map(s=>s.count),1);
+  html+=`<div class="chart-card"><div class="chart-title">投递进度分布</div>${statusCounts.map(s=>`
+    <div class="funnel-bar"><div class="fb-label">${s.l}</div>
+      <div class="fb-track"><div class="fb-fill" style="width:${Math.max(s.count/maxC*100,8)}%;background:${s.c}">${s.count}</div></div></div>`).join('')}</div>`;
+  // 2. Company type pie
+  const typeCounts={};
+  f.forEach(e=>{const t=e.companyType||'未分类';typeCounts[t]=(typeCounts[t]||0)+1;});
+  html+=`<div class="chart-card"><div class="chart-title">企业类型分布</div><div class="pie-wrap">${pieChart(typeCounts,TYPE_COLORS)}</div></div>`;
+  // 3. City distribution
+  const cityCounts={};
+  f.forEach(e=>{const c=e.city||'未填';cityCounts[c]=(cityCounts[c]||0)+1;});
+  const cityColors=['#3B82F6','#EF4444','#F59E0B','#10B981','#8B5CF6','#EC4899','#6366F1','#14B8A6','#F97316','#06B6D4'];
+  const cc={};Object.keys(cityCounts).forEach((k,i)=>{cc[k]=cityColors[i%cityColors.length];});
+  html+=`<div class="chart-card"><div class="chart-title">城市分布</div><div class="pie-wrap">${pieChart(cityCounts,cc)}</div></div>`;
+  // 4. Season comparison
+  const seasonCounts={};
+  entries.forEach(e=>{const s=e.season||'未分类';seasonCounts[s]=(seasonCounts[s]||0)+1;});
+  if(Object.keys(seasonCounts).length>1){
+    const maxS=Math.max(...Object.values(seasonCounts),1);
+    html+=`<div class="chart-card"><div class="chart-title">各求职季投递量</div>${Object.entries(seasonCounts).map(([k,v])=>`
+      <div class="funnel-bar"><div class="fb-label" style="width:80px">${k}</div>
+        <div class="fb-track"><div class="fb-fill" style="width:${Math.max(v/maxS*100,8)}%;background:var(--accent)">${v}</div></div></div>`).join('')}</div>`;
+  }
+  document.getElementById('chartsWrap').innerHTML=html||'<div class="empty"><div class="ei">📊</div><div class="es">添加投递记录后即可查看统计</div></div>';
+}
+function pieChart(data, colors){
+  const total=Object.values(data).reduce((a,b)=>a+b,0);
+  if(!total) return '<div style="color:var(--text3);font-size:13px">暂无数据</div>';
+  const sorted=Object.entries(data).sort((a,b)=>b[1]-a[1]);
+  const size=120, cx=60, cy=60, r=50;
+  let angle=0, paths='';
+  sorted.forEach(([k,v])=>{
+    const pct=v/total;
+    const a1=angle, a2=angle+pct*2*Math.PI;
+    const large=pct>0.5?1:0;
+    const x1=cx+r*Math.sin(a1), y1=cy-r*Math.cos(a1);
+    const x2=cx+r*Math.sin(a2), y2=cy-r*Math.cos(a2);
+    const color=colors[k]||'#999';
+    if(pct>=0.999) paths+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}"/>`;
+    else paths+=`<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z" fill="${color}"/>`;
+    angle=a2;
+  });
+  const legend=sorted.map(([k,v])=>`<div class="pie-legend-item"><div class="plc" style="background:${colors[k]||'#999'}"></div><span class="pln">${k}</span><span class="plv">${v}</span></div>`).join('');
+  return `<svg class="pie-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${paths}</svg><div class="pie-legend">${legend}</div>`;
+}
+
+// ═══════ EDITOR ═══════
+function openEditor(id){
+  editId=id||null;
+  document.getElementById('editorTitle').textContent=id?'编辑记录':'新增投递';
+  document.getElementById('delBtn').style.display=id?'block':'none';
+  // Status grid
+  document.getElementById('statusGrid').innerHTML=STATUSES.map(s=>`<button class="so" data-k="${s.k}" onclick="selSt('${s.k}')" style="border-color:${s.c}">${s.l}</button>`).join('');
+  // City datalist
+  const allCities=[...new Set([...CITIES_DEFAULT,...entries.map(e=>e.city).filter(Boolean)])];
+  document.getElementById('cityList').innerHTML=allCities.map(c=>`<option value="${c}">`).join('');
+  // Season select
+  renderSeasons();
+
+  if(id){
+    const it=entries.find(e=>e.id===id);if(!it)return;
+    document.getElementById('f_co').value=it.company||'';
+    document.getElementById('f_ct').value=it.companyType||'';
+    document.getElementById('f_dept').value=it.department||'';
+    document.getElementById('f_pos').value=it.position||'';
+    document.getElementById('f_city').value=it.city||'';
+    document.getElementById('f_season').value=it.season||SEASONS_DEFAULT[0];
+    document.getElementById('f_date').value=it.applyDate||'';
+    document.getElementById('f_ddl').value=it.deadline||'';
+    document.getElementById('f_plat').value=it.platform||'';
+    document.getElementById('f_ref').value=it.referrer||'';
+    document.getElementById('f_url').value=it.url||'';
+    document.getElementById('f_notes').value=it.notes||'';
+    selSt(it.status||'todo');
+    tmpIV=it.interviews?JSON.parse(JSON.stringify(it.interviews)):[];
+  } else {
+    ['f_co','f_dept','f_pos','f_city','f_ref','f_url','f_notes'].forEach(i=>document.getElementById(i).value='');
+    ['f_ct','f_plat'].forEach(i=>document.getElementById(i).selectedIndex=0);
+    document.getElementById('f_date').value=new Date().toISOString().split('T')[0];
+    document.getElementById('f_ddl').value='';
+    document.getElementById('f_season').value=curSeason!=='全部'?curSeason:SEASONS_DEFAULT[0];
+    selSt('applied');
+    tmpIV=[];
+  }
+  renderIVList();
+  document.getElementById('editorModal').classList.add('show');
+}
+function closeEditor(){document.getElementById('editorModal').classList.remove('show');editId=null;}
+
+function selSt(k){
+  document.querySelectorAll('.so').forEach(el=>{
+    const s=SM[el.dataset.k];
+    if(el.dataset.k===k){el.classList.add('active');el.style.background=s.c;el.style.color='#fff';}
+    else{el.classList.remove('active');el.style.background='var(--card)';el.style.color='var(--text)';}
+  });
+}
+function getSt(){const el=document.querySelector('.so.active');return el?el.dataset.k:'applied';}
+
+// Interview slots
+function renderIVList(){
+  document.getElementById('ivList').innerHTML=tmpIV.map((iv,i)=>`
+    <div class="iv-item">
+      <div class="iv-h"><span class="iv-label">${iv.round||'面试'}</span><button class="iv-rm" onclick="rmIV(${i})">删除</button></div>
+      <div class="fr">
+        <div class="ff"><label>轮次</label><select onchange="tmpIV[${i}].round=this.value">${IV_ROUNDS.map(r=>`<option ${iv.round===r?'selected':''}>${r}</option>`).join('')}</select></div>
+        <div class="ff"><label>日期</label><input type="date" value="${iv.date||''}" onchange="tmpIV[${i}].date=this.value"></div>
+      </div>
+      <div class="fr"><div class="ff"><label>形式</label><select onchange="tmpIV[${i}].type=this.value">
+        <option ${iv.type==='线上'?'selected':''}>线上</option><option ${iv.type==='线下'?'selected':''}>线下</option>
+        <option ${iv.type==='电话'?'selected':''}>电话</option><option ${iv.type==='群面'?'selected':''}>群面</option></select></div>
+        <div class="ff"><label>结果</label><div class="result-grid">${IV_RESULTS.map(r=>`<button class="result-opt ${(iv.result||'pending')===r.k?'active':''}" style="${(iv.result||'pending')===r.k?'background:'+r.c+';color:#fff;border-color:'+r.c:''}" onclick="setIVResult(${i},'${r.k}')">${r.l}</button>`).join('')}</div></div>
+      </div>
+      <div class="ff" style="margin-top:6px"><label>面经 / 记录</label>
+        <textarea rows="4" placeholder="面试问了什么？自己表现如何？" onchange="tmpIV[${i}].notes=this.value">${iv.notes||''}</textarea></div>
+    </div>
+  `).join('');
+}
+function addIV(){
+  tmpIV.push({round:IV_ROUNDS[Math.min(tmpIV.length,IV_ROUNDS.length-1)],date:'',type:'线上',result:'pending',notes:''});
+  renderIVList();
+}
+function rmIV(i){tmpIV.splice(i,1);renderIVList();}
+function setIVResult(i,k){tmpIV[i].result=k;renderIVList();}
+
+// Save / Delete
+function saveEntry(){
+  const co=document.getElementById('f_co').value.trim();
+  if(!co){alert('请填写公司名称');return;}
+  const data={
+    company:co,
+    companyType:document.getElementById('f_ct').value,
+    department:document.getElementById('f_dept').value.trim(),
+    position:document.getElementById('f_pos').value.trim(),
+    city:document.getElementById('f_city').value.trim(),
+    season:document.getElementById('f_season').value,
+    applyDate:document.getElementById('f_date').value,
+    deadline:document.getElementById('f_ddl').value,
+    platform:document.getElementById('f_plat').value,
+    referrer:document.getElementById('f_ref').value.trim(),
+    url:document.getElementById('f_url').value.trim(),
+    notes:document.getElementById('f_notes').value.trim(),
+    status:getSt(),
+    interviews:tmpIV,
+    updatedAt:Date.now(),
+  };
+  if(editId){const idx=entries.findIndex(e=>e.id===editId);if(idx>=0)entries[idx]={...entries[idx],...data};}
+  else{data.id='j_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);data.createdAt=Date.now();entries.push(data);}
+  saveData();closeEditor();switchPage(curPage,document.querySelector('.tab-item.active'));
+}
+function delEntry(){
+  if(!editId||!confirm('确定删除这条记录？'))return;
+  entries=entries.filter(e=>e.id!==editId);
+  saveData();closeEditor();switchPage(curPage,document.querySelector('.tab-item.active'));
+}
+
+// ═══════ Settings ═══════
+function openSett(){
+  document.getElementById('settingsModal').classList.add('show');
+  setProvider(getProvider());
+}
+function closeSett(){document.getElementById('settingsModal').classList.remove('show');}
+function exportJSON(){
+  const blob=new Blob([JSON.stringify({version:DATA_VERSION,exportedAt:Date.now(),entries},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`启程录_备份_${new Date().toISOString().split('T')[0]}.json`;a.click();
+  localStorage.setItem('jt_lastBackup',Date.now().toString());
+  renderBackupBanner();
+}
+function importJSON(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const raw=JSON.parse(e.target.result);
+      const imported=migrateImport(raw);
+      if(!imported.length)throw new Error('无有效数据');
+      const existIds=new Set(entries.map(e=>e.id));
+      let added=0,updated=0;
+      imported.forEach(item=>{
+        if(existIds.has(item.id)){
+          const idx=entries.findIndex(e=>e.id===item.id);
+          if(idx>=0&&(item.updatedAt||0)>(entries[idx].updatedAt||0)){entries[idx]=item;updated++;}
+        }else{entries.push(item);added++;}
+      });
+      saveData();
+      switchPage(curPage,document.querySelector('.tab-item.active'));
+      alert(`导入完成！新增 ${added} 条，更新 ${updated} 条，共 ${entries.length} 条。`);
+    }catch(err){alert('导入失败：'+err.message);}
+  };
+  reader.readAsText(file);ev.target.value='';
+}
+function exportCSV(){
+  const hds=['公司','类型','部门','岗位','城市','求职季','状态','投递日期','截止','渠道','内推人','链接','面试轮数','备注'];
+  const rows=entries.map(e=>[e.company,e.companyType,e.department,e.position,e.city,e.season,(SM[e.status]||{}).l||e.status,e.applyDate,e.deadline,e.platform,e.referrer,e.url,(e.interviews||[]).length,(e.notes||'').replace(/[\n\r,]/g,' ')]);
+  const csv='\uFEFF'+[hds,...rows].map(r=>r.map(c=>`"${c||''}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`启程录_${new Date().toISOString().split('T')[0]}.csv`;a.click();
+}
+function clearAll(){
+  if(!confirm('确定清空所有数据？不可撤销！'))return;
+  if(!confirm('再次确认，建议先导出备份'))return;
+  entries=[];saveData();switchPage('board',document.querySelector('.tab-item:first-child'));closeSett();
+}
+
+// ═══════ API Key & Provider ═══════
+const PROVIDERS={
+  deepseek:{name:'DeepSeek',url:'https://api.deepseek.com/chat/completions',model:'deepseek-chat',balanceUrl:'https://api.deepseek.com/user/balance',keyPage:'https://platform.deepseek.com/usage',hint:'Key 以 sk- 开头。仅存储在浏览器本地，不会上传。'},
+  qwen:{name:'通义千问',url:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',model:'qwen-plus',balanceUrl:null,keyPage:'https://bailian.console.aliyun.com/',hint:'Key 以 sk- 开头。在阿里云百炼平台获取。仅存储在浏览器本地。'},
+};
+function getProvider(){return localStorage.getItem('jt_provider')||'deepseek';}
+function setProvider(p){
+  localStorage.setItem('jt_provider',p);
+  document.getElementById('provBtn_deepseek').style.borderColor=p==='deepseek'?'var(--accent)':'var(--border)';
+  document.getElementById('provBtn_deepseek').style.background=p==='deepseek'?'var(--accent-light)':'var(--card)';
+  document.getElementById('provBtn_qwen').style.borderColor=p==='qwen'?'var(--accent)':'var(--border)';
+  document.getElementById('provBtn_qwen').style.background=p==='qwen'?'var(--accent-light)':'var(--card)';
+  const pv=PROVIDERS[p];
+  document.getElementById('providerHint').innerHTML=`${pv.hint} <a href="${pv.keyPage}" target="_blank" style="color:var(--accent)">获取 API Key →</a>`;
+  document.getElementById('balanceBtn').style.display=pv.balanceUrl?'inline-block':'none';
+  document.getElementById('balanceInfo').style.display='none';
+  // Load saved key for this provider
+  document.getElementById('apiKeyInput').value=localStorage.getItem('jt_apikey_'+p)||'';
+  document.getElementById('apiKeyStatus').textContent=localStorage.getItem('jt_apikey_'+p)?'✓ 已配置':'';
+}
+function getAPIKey(){const p=getProvider();return localStorage.getItem('jt_apikey_'+p)||'';}
+function saveAPIKey(){
+  const k=document.getElementById('apiKeyInput').value.trim();
+  if(!k){alert('请输入 API Key');return;}
+  localStorage.setItem('jt_apikey_'+getProvider(),k);
+  document.getElementById('apiKeyStatus').textContent='✓ 已保存';
+  setTimeout(()=>{document.getElementById('apiKeyStatus').textContent='✓ 已配置';},1500);
+  if(currentUser&&!offlineMode) pushSettings();
+}
+function clearAPIKey(){localStorage.removeItem('jt_apikey_'+getProvider());document.getElementById('apiKeyInput').value='';document.getElementById('apiKeyStatus').textContent='';document.getElementById('balanceInfo').style.display='none';}
+async function checkBalance(){
+  const p=getProvider();const pv=PROVIDERS[p];
+  if(!pv.balanceUrl){alert('该服务商暂不支持余额查询');return;}
+  const k=getAPIKey();if(!k){alert('请先填写 API Key');return;}
+  const el=document.getElementById('balanceInfo');
+  el.style.display='block';el.textContent='查询中...';
+  try{
+    const resp=await fetch(pv.balanceUrl,{headers:{'Authorization':'Bearer '+k}});
+    if(!resp.ok) throw new Error('查询失败 ('+resp.status+')');
+    const data=await resp.json();
+    if(data.balance_infos&&data.balance_infos.length){
+      const b=data.balance_infos[0];
+      el.innerHTML=`💰 可用余额：<b>¥${b.total_balance}</b>　已用：¥${b.topped_up||0}　赠送：¥${b.granted_balance||0}`;
+    } else el.textContent='✓ Key 有效，余额详情请前往平台查看';
+  }catch(err){el.innerHTML=`<span style="color:var(--s-rejected)">❌ ${err.message}</span>`;}
+}
+
+// ═══════ Achievements ═══════
+const ACH_GROUPS=[
+  {name:'投递之路',ico:'🎯',levels:[
+    {stars:1,desc:'投递 10 家',need:10},
+    {stars:2,desc:'投递 50 家',need:50},
+    {stars:3,desc:'投递 100 家',need:100},
+    {stars:4,desc:'投递 300 家',need:300},
+    {stars:5,desc:'投递 500 家',need:500},
+  ],val:d=>d.applied},
+  {name:'面试达人',ico:'🎤',levels:[
+    {stars:1,desc:'完成 3 场面试',need:3},
+    {stars:2,desc:'完成 10 场面试',need:10},
+    {stars:3,desc:'完成 30 场面试',need:30},
+    {stars:4,desc:'完成 60 场面试',need:60},
+    {stars:5,desc:'完成 100 场面试',need:100},
+  ],val:d=>d.ivCount},
+  {name:'笔耕不辍',ico:'✍️',levels:[
+    {stars:1,desc:'写 3 篇面经',need:3},
+    {stars:2,desc:'写 10 篇面经',need:10},
+    {stars:3,desc:'写 30 篇面经',need:30},
+    {stars:4,desc:'写 50 篇面经',need:50},
+    {stars:5,desc:'写 100 篇面经',need:100},
+  ],val:d=>d.noteCount},
+  {name:'收割 Offer',ico:'🏆',levels:[
+    {stars:1,desc:'拿到 1 个 Offer',need:1},
+    {stars:2,desc:'拿到 3 个 Offer',need:3},
+    {stars:3,desc:'拿到 5 个 Offer',need:5},
+    {stars:4,desc:'拿到 10 个 Offer',need:10},
+    {stars:5,desc:'拿到 15 个 Offer',need:15},
+  ],val:d=>d.offerCount},
+  {name:'广撒网',ico:'🗺️',levels:[
+    {stars:1,desc:'覆盖 3 个城市',need:3},
+    {stars:2,desc:'覆盖 5 个城市',need:5},
+    {stars:3,desc:'覆盖 8 个城市',need:8},
+  ],val:d=>d.cityCount},
+  {name:'不挑食',ico:'🎭',levels:[
+    {stars:1,desc:'覆盖 3 种企业类型',need:3},
+    {stars:2,desc:'覆盖 5 种企业类型',need:5},
+    {stars:3,desc:'覆盖 7 种企业类型',need:7},
+  ],val:d=>d.typeCount},
+];
+function getAchData(){
+  const applied=entries.filter(e=>e.status!=='todo').length;
+  const ivCount=entries.reduce((s,e)=>(s+(e.interviews||[]).length),0);
+  const noteCount=entries.reduce((s,e)=>(s+(e.interviews||[]).filter(iv=>iv.notes&&iv.notes.trim()).length),0);
+  const offerCount=entries.filter(e=>e.status==='offer').length;
+  const cityCount=new Set(entries.map(e=>e.city).filter(Boolean)).size;
+  const typeCount=new Set(entries.map(e=>e.companyType).filter(Boolean)).size;
+  return{total:entries.length,applied,ivCount,noteCount,offerCount,cityCount,typeCount};
+}
+function openAchieve(){
+  const d=getAchData();
+  let totalStars=0, maxStars=0;
+  ACH_GROUPS.forEach(g=>{
+    const cur=g.val(d);
+    g.levels.forEach(lv=>{maxStars++;if(cur>=lv.need) totalStars++;});
+  });
+  document.getElementById('achSummary').innerHTML=`<div class="big">⭐ ${totalStars} / ${maxStars}</div><div class="sub">已获得星星</div>`;
+  document.getElementById('achGrid').innerHTML=ACH_GROUPS.map(g=>{
+    const cur=g.val(d);
+    // Find current star level
+    let earned=0;
+    g.levels.forEach(lv=>{if(cur>=lv.need)earned=lv.stars;});
+    const nextLv=g.levels.find(lv=>cur<lv.need);
+    const maxLv=g.levels[g.levels.length-1];
+    const pct=nextLv?Math.min(cur/nextLv.need*100,100):100;
+    const starsHTML=g.levels.map(lv=>`<span style="font-size:14px;${cur>=lv.need?'':'opacity:.2'}">${cur>=lv.need?'⭐':'☆'}</span>`).join('');
+    return `<div class="ach-card ${earned>0?'unlocked':'locked'}">
+      <div class="ach-ico">${g.ico}</div>
+      <div class="ach-name">${g.name}</div>
+      <div style="margin:4px 0">${starsHTML}</div>
+      <div class="ach-desc">${nextLv?nextLv.desc:('已满星 ✓')}</div>
+      <div class="ach-prog"><div class="ach-prog-fill" style="width:${pct}%"></div></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">${Math.min(cur,nextLv?nextLv.need:maxLv.need)} / ${nextLv?nextLv.need:maxLv.need}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('achModal').classList.add('show');
+}
+function closeAchieve(){document.getElementById('achModal').classList.remove('show');}
+
+// ═══════ AI Assistant ═══════
+function openAI(){
+  document.getElementById('aiModal').classList.add('show');
+  switchAITab('search',document.querySelector('.ai-tab'));
+  populateReviewSelect();
+  checkAIKey();
+}
+function closeAI(){document.getElementById('aiModal').classList.remove('show');}
+function switchAITab(tab,el){
+  document.querySelectorAll('.ai-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.ai-panel').forEach(p=>p.classList.remove('show'));
+  document.getElementById('ai-'+tab).classList.add('show');
+  if(tab==='review') populateReviewSelect();
+}
+function checkAIKey(){
+  const k=getAPIKey();
+  const pv=PROVIDERS[getProvider()];
+  const notice=document.getElementById('aiKeyNotice');
+  if(!k){
+    notice.innerHTML=`<div class="ai-nokey">⚠️ 使用 AI 功能需要 ${pv.name} API Key<br><a onclick="closeAI();openSett()">前往设置填写 →</a></div>`;
+  } else notice.innerHTML='';
+}
+function populateReviewSelect(){
+  const sel=document.getElementById('ai_r_select');
+  const opts=[{v:'',t:'请选择...'}];
+  entries.forEach(e=>{(e.interviews||[]).forEach((iv,i)=>{
+    if(iv.notes&&iv.notes.trim()) opts.push({v:`${e.id}|${i}`,t:`${e.company} - ${iv.round||'面试'}${iv.date?' ('+iv.date+')':''}`});
+  });});
+  sel.innerHTML=opts.map(o=>`<option value="${o.v}">${o.t}</option>`).join('');
+  sel.onchange=function(){
+    const pre=document.getElementById('ai_r_preview');
+    if(!this.value){pre.style.display='none';return;}
+    const [eid,idx]=this.value.split('|');
+    const e=entries.find(x=>x.id===eid);
+    if(e&&e.interviews[idx]){pre.style.display='block';pre.textContent=e.interviews[idx].notes;}
+  };
+}
+
+async function callAI(prompt,resultEl){
+  const key=getAPIKey();
+  if(!key){checkAIKey();return;}
+  const pv=PROVIDERS[getProvider()];
+  resultEl.style.display='block';
+  resultEl.innerHTML='<div class="ai-loading">AI 思考中 <span class="dots">...</span></div>';
+  try{
+    const resp=await fetch(pv.url,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model:pv.model,messages:[{role:'user',content:prompt}],max_tokens:2000,temperature:0.7,stream:false})
+    });
+    if(!resp.ok){
+      const err=await resp.json().catch(()=>({}));
+      throw new Error(err.error?.message||`请求失败 (${resp.status})，请检查 API Key`);
+    }
+    const data=await resp.json();
+    const raw=data.choices?.[0]?.message?.content||'AI 未返回内容';
+    // Strip markdown formatting for clean display
+    resultEl.innerHTML=renderAIText(raw);
+  }catch(err){
+    resultEl.innerHTML=`<div style="color:var(--s-rejected)">❌ ${err.message}</div>`;
+  }
+}
+function renderAIText(raw){
+  let t=raw;
+  // Remove markdown headers
+  t=t.replace(/^#{1,4}\s*/gm,'');
+  // Bold **text** → <b>
+  t=t.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+  // Remove remaining * and - list markers at line start
+  t=t.replace(/^[\*\-]\s+/gm,'· ');
+  // Remove --- horizontal rules
+  t=t.replace(/^-{3,}$/gm,'');
+  // Numbered lists: keep but clean up
+  t=t.replace(/^(\d+)\.\s+/gm,'$1. ');
+  // Clean up multiple blank lines
+  t=t.replace(/\n{3,}/g,'\n\n');
+  return t.trim().replace(/\n/g,'<br>');
+}
+
+function aiSearch(){
+  const co=document.getElementById('ai_s_co').value.trim();
+  const pos=document.getElementById('ai_s_pos').value.trim();
+  if(!co){alert('请输入公司名称');return;}
+  const prompt=`你是一个资深求职顾问。我即将面试「${co}」的「${pos||'相关岗位'}」。请帮我：
+
+1. 分析这个公司/岗位的面试风格和特点（如果你了解的话）
+2. 列出这类岗位最常见的 8-10 个面试问题
+3. 每个问题给出简要的回答思路和要点
+4. 给出 3-5 条针对性的备战建议
+
+请用中文回答，条理清晰，实用为主。不要使用 markdown 格式（不要 #、##、**、--- 等符号），用自然的中文表达即可。`;
+  callAI(prompt,document.getElementById('ai_s_result'));
+}
+
+function aiReview(){
+  const sel=document.getElementById('ai_r_select').value;
+  if(!sel){alert('请先选择一条面试记录');return;}
+  const [eid,idx]=sel.split('|');
+  const e=entries.find(x=>x.id===eid);
+  if(!e||!e.interviews[idx])return;
+  const iv=e.interviews[idx];
+  const prompt=`你是一个资深求职面试教练。以下是我在「${e.company}」（${e.companyType||''}）面试「${e.position||''}」的${iv.round||'面试'}记录：
+
+---
+${iv.notes}
+---
+
+面试结果：${iv.result==='passed'?'通过':iv.result==='failed'?'未通过':'待定'}
+
+请帮我做面试复盘：
+1. 分析这次面试中我表现好的地方和薄弱环节
+2. 对每个被问到的问题，给出更好的回答思路
+3. 总结我需要重点补强的知识/能力方向
+4. 给出 3-5 条具体的改进行动建议
+
+请用中文回答，诚恳直接，重在实用。不要使用 markdown 格式（不要 #、##、**、--- 等符号），用自然的段落表达。`;
+  callAI(prompt,document.getElementById('ai_r_result'));
+}
+
+function aiWeekly(){
+  const now=new Date();
+  const weekAgo=new Date(now-7*86400000);
+  const weekStr=weekAgo.toISOString().split('T')[0];
+  const recentApply=entries.filter(e=>e.applyDate&&e.applyDate>=weekStr);
+  const recentIV=[];
+  entries.forEach(e=>{(e.interviews||[]).forEach(iv=>{if(iv.date&&iv.date>=weekStr) recentIV.push({company:e.company,position:e.position,round:iv.round,result:iv.result,date:iv.date});});});
+  const statusSummary={};
+  entries.forEach(e=>{const s=(SM[e.status]||{}).l||e.status;statusSummary[s]=(statusSummary[s]||0)+1;});
+
+  const prompt=`你是我的一个朋友，也是求职过来人。我最近在找工作，现在给你看看我的数据，帮我像朋友聊天一样总结一下这周的情况，别用那种报告体，就像微信里跟好朋友说话一样就行。
+
+不要用任何 markdown 格式（不要 #、##、**、---），不要分什么"一二三四"大标题，就自然地聊就好。可以分几段，但别搞得像公文。语气轻松点，该夸就夸，该提醒就直说，别套话。
+
+我的数据：
+- 总共投了 ${entries.length} 家
+- 目前状态：${Object.entries(statusSummary).map(([k,v])=>`${k} ${v}家`).join('，')}
+
+这周新投了 ${recentApply.length} 家：${recentApply.length?recentApply.map(e=>`${e.company}(${e.position||'岗位未填'})`).join('、'):'没有新投的'}
+
+这周面试了 ${recentIV.length} 场：${recentIV.length?recentIV.map(iv=>`${iv.company}${iv.round||'面试'} ${iv.result==='passed'?'过了':iv.result==='failed'?'挂了':'还没出结果'}`).join('、'):'没有面试'}
+
+帮我聊聊：这周整体怎么样，有什么值得高兴的，有什么需要注意的，接下来建议我重点做什么。最后来句鼓励的话（别太鸡汤）。`;
+  callAI(prompt,document.getElementById('ai_w_result'));
+}
+
+// ═══════ Guide ═══════
+function showGuide(){document.getElementById('guideModal').classList.add('show');}
+function closeGuide(){document.getElementById('guideModal').classList.remove('show');}
+
+// ═══════ Welcome Banner ═══════
+function renderWelcome(){
+  const el=document.getElementById('welcomeBanner');
+  const dismissed=localStorage.getItem('jt_welcomeDone');
+  if(dismissed || entries.some(e=>!e.id.startsWith('demo'))){el.innerHTML='';return;}
+  if(!entries.length) loadDemoData();
+  el.innerHTML=`<div class="welcome-banner">
+    <button class="wb-close" onclick="dismissWelcome()">✕</button>
+    <div class="wb-title">👋 欢迎使用启程录</div>
+    <div class="wb-sub">记录你的每一次投递和面试。下方有几条示例数据，点击查看或编辑。右上角 ✨ 可以体验 AI 助手，🏆 查看成就。</div>
+    <div class="wb-actions">
+      <button class="wb-btn primary" onclick="showGuide();dismissWelcome()">查看使用说明</button>
+      <button class="wb-btn secondary" onclick="clearDemo()">清空示例，开始使用</button>
+    </div>
+  </div>`;
+}
+function dismissWelcome(){localStorage.setItem('jt_welcomeDone','1');document.getElementById('welcomeBanner').innerHTML='';}
+function clearDemo(){
+  entries=entries.filter(e=>!e.id.startsWith('demo'));
+  saveData();dismissWelcome();renderBoard();
+}
+
+// ═══════ Kanban Scroll Hint ═══════
+function initKanbanHint(){
+  const kb=document.querySelector('.kanban');
+  if(!kb) return;
+  const hint=document.getElementById('kanbanHint');
+  // Hide hint after first scroll
+  kb.addEventListener('scroll',function(){
+    if(kb.scrollLeft>30 && hint) hint.style.display='none';
+  },{passive:true});
+  // Also hide if kanban fits without scroll
+  setTimeout(()=>{if(kb.scrollWidth<=kb.clientWidth+10 && hint) hint.style.display='none';},300);
+}
+
+// ═══════ Init ═══════
+async function initApp(){
+  if(!calYear){const d=new Date();calYear=d.getFullYear();calMonth=d.getMonth();}
+  // Check existing session
+  if(sb){
+    const{data:{session}}=await sb.auth.getSession();
+    if(session&&session.user){
+      currentUser=session.user;
+      await enterApp();
+      return;
+    }
+  }
+  // No session: show login page
+  document.getElementById('loginPage').style.display='flex';
+}
+
+// Demo data for new users
+function loadDemoData(){
+  if(entries.length||localStorage.getItem('jt_welcomeDone'))return;
+  entries=[
+    {id:'demo1',company:'字节跳动',companyType:'互联网',department:'AI Lab',position:'算法工程师实习',city:'北京',season:'暑期实习2026',status:'round1',applyDate:'2026-02-15',platform:'官网',url:'https://jobs.bytedance.com',interviews:[{round:'一面',date:'2026-02-22',type:'线上',result:'passed',notes:'1. 自我介绍\n2. 介绍一下你最熟悉的深度学习模型\n3. BN 和 LN 的区别？什么场景下用哪个？\n4. 手撕：二叉树的层序遍历\n5. 项目深挖：你这个推荐系统的召回策略是怎么设计的？\n6. 反问环节\n\n面试官是组里的senior，问题覆盖基础+项目，难度适中。'}],createdAt:Date.now(),updatedAt:Date.now()},
+    {id:'demo2',company:'腾讯',companyType:'互联网',department:'微信事业群',position:'NLP算法实习',city:'深圳',season:'暑期实习2026',status:'applied',applyDate:'2026-02-18',platform:'牛客',url:'https://join.qq.com',interviews:[],createdAt:Date.now(),updatedAt:Date.now()},
+    {id:'demo3',company:'商汤科技',companyType:'互联网',department:'研究院',position:'计算机视觉研究实习',city:'上海',season:'暑期实习2026',status:'offer',applyDate:'2026-01-20',platform:'内推',referrer:'实验室师兄',interviews:[{round:'一面',date:'2026-02-01',type:'线上',result:'passed',notes:'1. Transformer 的 attention 机制详细讲一下\n2. ViT 和 CNN 各自的优劣？\n3. 目标检测 YOLO 系列的演进\n4. 你论文里这个方法和 xxx 相比优势在哪\n\n比较注重论文和基础，需要对自己的研究方向非常熟悉'},{round:'二面',date:'2026-02-10',type:'线下',result:'passed',notes:'总监面，聊了研究方向和职业规划，问了对AGI的看法，不太涉及技术细节。'}],createdAt:Date.now(),updatedAt:Date.now()},
+    {id:'demo4',company:'DeepSeek',companyType:'互联网',department:'',position:'大模型预训练',city:'北京',season:'暑期实习2026',status:'todo',applyDate:'',platform:'',interviews:[],notes:'3月份开放申请，关注官网和公众号',createdAt:Date.now(),updatedAt:Date.now()},
+    {id:'demo5',company:'华为',companyType:'国企',department:'2012实验室',position:'AI算法工程师',city:'杭州',season:'暑期实习2026',status:'hung',applyDate:'2026-02-10',platform:'官网',interviews:[{round:'一面',date:'2026-02-16',type:'线上',result:'failed',notes:'1. 手撕 LRU Cache\n2. 梯度消失和梯度爆炸的原因和解决方案\n3. 讲一下你对 MoE 的理解\n4. 分布式训练 Data Parallel vs Model Parallel\n\n手撕写出来了但有bug，分布式那块答得不好，需要补强'}],createdAt:Date.now(),updatedAt:Date.now()},
+  ];
+  saveDataLocal();
+}
+
+initApp();
+// Migrate old API key
+if(localStorage.getItem('jt_apikey')&&!localStorage.getItem('jt_apikey_deepseek')){
+  localStorage.setItem('jt_apikey_deepseek',localStorage.getItem('jt_apikey'));
+  localStorage.removeItem('jt_apikey');
+}
+</script>
+</body>
+</html>
