@@ -129,14 +129,21 @@ body{font-family:'Noto Sans SC','DM Sans',-apple-system,sans-serif;background:va
 .cal-month{padding:0 20px;margin-bottom:20px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .cal-hd{text-align:center;font-size:10px;font-weight:600;color:var(--text3);padding:4px}
-.cal-cell{text-align:center;padding:6px 2px;border-radius:8px;font-size:12px;color:var(--text3);min-height:36px;position:relative;cursor:default;transition:.15s}
+.cal-cell{padding:6px;border-radius:10px;font-size:12px;color:var(--text3);min-height:92px;position:relative;cursor:default;transition:.15s;display:flex;flex-direction:column;align-items:stretch;text-align:left}
 .cal-cell.cur-month{color:var(--text)}
-.cal-cell.today{background:var(--accent-light);font-weight:700;color:var(--accent)}
-.cal-cell .cal-dots{display:flex;gap:2px;justify-content:center;margin-top:1px}
+.cal-cell.today{background:linear-gradient(135deg,#FFE6EA 0%,#FFD2DA 100%);font-weight:800;color:#C2185B;box-shadow:inset 0 0 0 2px rgba(194,24,91,.22),0 6px 14px rgba(194,24,91,.12)}
+.cal-cell .cal-day-top{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:4px}
+.cal-cell .cal-day-num{font-weight:700;color:inherit}
+.cal-cell .cal-dots{display:flex;gap:2px;justify-content:flex-end;margin-top:1px}
+.cal-cell .cal-day-list{display:flex;flex-direction:column;gap:3px;min-height:0}
+.cal-cell .cal-item{background:rgba(255,255,255,.72);border-radius:6px;padding:3px 4px;line-height:1.2;overflow:hidden}
+.cal-cell .cal-item-time{font-size:9px;font-weight:700;color:var(--accent);white-space:nowrap}
+.cal-cell .cal-item-company{font-size:10px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-cell .cal-more{font-size:9px;color:#1D4ED8;font-weight:700;padding-top:1px}
 .cal-cell .cd{width:5px;height:5px;border-radius:50%}
 .cal-cell.has-event{cursor:pointer;background:#DBEAFE;border-radius:8px;font-weight:600;color:#1D4ED8}
 .cal-cell.has-event:hover{background:#BFDBFE}
-.cal-cell.has-event.today{background:linear-gradient(135deg,var(--accent-light),#DBEAFE)}
+.cal-cell.has-event.today{background:linear-gradient(135deg,#FFE6EA 0%,#FFD2DA 100%);color:#AD1457}
 .cal-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 20px}
 .cal-nav-btn{width:34px;height:34px;border-radius:10px;border:none;background:var(--card);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);transition:.2s}
 .cal-nav-btn:active{transform:scale(.9)}
@@ -515,8 +522,7 @@ body{font-family:'Noto Sans SC','DM Sans',-apple-system,sans-serif;background:va
       <div class="fr"><div class="ff"><label>城市</label><input id="f_city" placeholder="如 北京" list="cityList"><datalist id="cityList"></datalist></div><div class="ff"><label>求职季</label><select id="f_season"></select></div></div>
     </div>
     <div class="fs"><div class="fs-t">投递信息</div>
-      <div class="fr"><div class="ff"><label>投递日期</label><input type="date" id="f_date"></div><div class="ff"><label>网申截止</label><input type="date" id="f_ddl"></div></div>
-      <div class="fr"><div class="ff"><label>投递渠道</label><select id="f_plat"><option value="">选择</option><option>官网</option><option>BOSS直聘</option><option>牛客</option><option>实习僧</option><option>智联招聘</option><option>前程无忧</option><option>公众号</option><option>邮箱投递</option><option>内推</option><option>其他</option></select></div><div class="ff"><label>内推人</label><input id="f_ref" placeholder="如有内推"></div></div>
+      <div class="fr"><div class="ff"><label>投递日期</label><input type="date" id="f_date"></div><div class="ff"><label>投递渠道</label><select id="f_plat"><option value="">选择</option><option>官网</option><option>BOSS直聘</option><option>牛客</option><option>实习僧</option><option>智联招聘</option><option>前程无忧</option><option>公众号</option><option>邮箱投递</option><option>内推</option><option>其他</option></select></div></div>
       <div class="fr"><div class="ff"><label>投递/官网链接</label><div style="display:flex;gap:6px"><input type="url" id="f_url" placeholder="https://..." style="flex:1"><button onclick="const u=document.getElementById('f_url').value;if(u)window.open(u,'_blank')" style="flex-shrink:0;padding:0 12px;border-radius:8px;border:none;background:var(--card);font-size:13px;cursor:pointer;font-family:inherit;box-shadow:var(--shadow-xs)">打开</button></div></div></div>
     </div>
     <div class="fs"><div class="fs-t">当前状态</div><div class="status-grid" id="statusGrid"></div></div>
@@ -654,6 +660,7 @@ const STATUSES=[
   {k:'offer',l:'Offer',c:'var(--s-offer)'},{k:'hung',l:'被挂',c:'var(--s-hung)'},{k:'rejected',l:'已拒',c:'var(--s-rejected)'},{k:'withdrawn',l:'放弃',c:'var(--s-withdrawn)'},
 ];
 const SM=Object.fromEntries(STATUSES.map(s=>[s.k,s]));
+const EDITABLE_STATUSES=STATUSES.filter(s=>!['todo','applied'].includes(s.k));
 const IV_ROUNDS=['笔试','一面','二面','三面','HR面','加面','终面'];
 const IV_RESULTS=[{k:'pending',l:'待定',c:'var(--s-applied)'},{k:'passed',l:'通过',c:'var(--s-offer)'},{k:'failed',l:'挂了',c:'var(--s-rejected)'}];
 const SEASONS_DEFAULT=['暑期实习2026','秋招2026','春招2027'];
@@ -811,6 +818,12 @@ function switchPage(pg,el){
 }
 function refreshIcons(){if(window.lucide)lucide.createIcons();}
 function ico(name,sz=16){const icons={'map-pin':'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>','calendar':'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>','mail':'<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>','handshake':'<path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88"/>','bookmark':'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>','note':'<path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/>','external':'<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/>'};return `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle">${icons[name]||''}</svg>`;}
+function sortInterviewsByTime(a,b){
+  const ta=a.time||'99:99';
+  const tb=b.time||'99:99';
+  if(ta!==tb) return ta.localeCompare(tb);
+  return (a.company||'').localeCompare(b.company||'');
+}
 
 // ═══════ BOARD ═══════
 function renderBoard(){renderSeasons();renderStats();renderPipeline();renderBackupBanner();renderWelcome();
@@ -825,25 +838,20 @@ function setSeason(s){curSeason=s;renderBoard();}
 
 // ═══════ CLICKABLE STATS ═══════
 function renderStats(){
-  const f=filtered(),total=f.length,applied=f.filter(e=>e.status!=='todo').length;
+  const f=filtered(),tracked=f.filter(e=>!['todo','applied'].includes(e.status)),total=tracked.length;
   const offer=f.filter(e=>e.status==='offer').length;
   const ivStatuses=['round1','round2','round3','hr'];
   const iv=f.filter(e=>ivStatuses.includes(e.status)).length;
-  const rej=f.filter(e=>e.status==='rejected'||e.status==='hung').length;
   const written=f.filter(e=>e.status==='written').length;
-  const todo=f.filter(e=>e.status==='todo').length;
   const withdrawn=f.filter(e=>e.status==='withdrawn').length;
   const hung=f.filter(e=>e.status==='hung').length;
   const rejected=f.filter(e=>e.status==='rejected').length;
-  const appliedOnly=f.filter(e=>e.status==='applied').length;
 
   const pills=[
     {key:null,label:'总计',n:total,cls:'accent',nc:''},
     {key:'offer',label:'Offer',n:offer,nc:'color:var(--s-offer)'},
     {key:'_iv',label:'面试中',n:iv,nc:'color:var(--s-r1)'},
     {key:'written',label:'笔试',n:written,nc:'color:var(--s-written)'},
-    {key:'applied',label:'已投递',n:appliedOnly,nc:'color:var(--s-applied)'},
-    {key:'todo',label:'待投递',n:todo,nc:'color:var(--s-todo)'},
     {key:'hung',label:'被挂',n:hung,nc:'color:var(--s-hung)'},
     {key:'rejected',label:'已拒',n:rejected,nc:'color:var(--s-rejected)'},
     {key:'withdrawn',label:'放弃',n:withdrawn,nc:'color:var(--s-withdrawn)'},
@@ -851,7 +859,7 @@ function renderStats(){
   // Only show pills with count > 0 (except total always shows)
   const show=pills.filter(p=>p.n>0||p.key===null);
   // Add offer rate
-  if(applied>0) show.push({key:'_rate',label:'Offer率',n:Math.round(offer/applied*100)+'%',nc:'',noClick:true});
+  if(total>0) show.push({key:'_rate',label:'Offer率',n:Math.round(offer/total*100)+'%',nc:'',noClick:true});
 
   document.getElementById('statsRow').innerHTML=show.map(p=>{
     const isActive=statsFilter===p.key&&p.key!==null;
@@ -874,22 +882,22 @@ function renderPipeline(){
   // Determine which statuses to show based on statsFilter
   let showStatuses;
   if(!statsFilter){
-    showStatuses=STATUSES.map(s=>s.k);
+    showStatuses=['written','round1','round2','round3','hr','offer','hung','rejected','withdrawn'];
   } else if(statsFilter==='_iv'){
     showStatuses=['round1','round2','round3','hr'];
   } else {
     showStatuses=[statsFilter];
   }
   // Pipeline order: top to bottom
-  const pipeOrder=['todo','applied','written','round1','round2','round3','hr','offer','hung','rejected','withdrawn'];
+  const pipeOrder=['written','round1','round2','round3','hr','offer','hung','rejected','withdrawn'];
   const sections=pipeOrder.filter(k=>showStatuses.includes(k)).map(k=>{
     const s=SM[k];const items=f.filter(e=>e.status===k).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
     return{...s,items};
-  }).filter(s=>s.items.length>0||!statsFilter); // show empty sections only when no filter
+  }).filter(s=>s.items.length>0||!statsFilter);
 
   const totalCards=f.length||1;
   document.getElementById('pipelineView').innerHTML=sections.map(s=>{
-    const collapsed=collapsedSections[s.k];
+    const collapsed=collapsedSections[s.k] ?? (s.items.length===0);
     const pct=Math.round(s.items.length/totalCards*100);
     return `<div class="pipe-section ${collapsed?'collapsed':''}" id="pipe_${s.k}">
       <div class="pipe-header" onclick="togglePipeSection('${s.k}')" style="">
@@ -900,8 +908,7 @@ function renderPipeline(){
         <div class="pipe-progress"><div class="pipe-progress-fill" style="width:${pct}%;background:${s.c}"></div></div>
         <span class="pipe-toggle">▼</span>
       </div>
-      ${s.items.length?`<div class="pipe-cards">${s.items.map(cardHTML).join('')}</div>`
-        :`<div class="pipe-empty">暂无记录</div>`}
+      ${s.items.length?`<div class="pipe-cards">${s.items.map(cardHTML).join('')}</div>`:`<div class="pipe-empty">暂无记录</div>`}
     </div>`;
   }).join('')||'<div class="empty"><div class="ei">📋</div><div class="es">没有匹配的记录</div></div>';
 }
@@ -956,13 +963,16 @@ function renderCalPage(){
   const firstDay=new Date(calYear,calMonth,1).getDay();const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
   const today=new Date();const todayStr=today.toISOString().split('T')[0];
   const events={};entries.forEach(e=>{(e.interviews||[]).forEach(iv=>{if(iv.date){if(!events[iv.date])events[iv.date]=[];events[iv.date].push({...iv,company:e.company,entryId:e.id,position:e.position});}});});
+  Object.keys(events).forEach(date=>events[date].sort(sortInterviewsByTime));
   const hds=['日','一','二','三','四','五','六'];
   let html='<div class="cal-month"><div class="cal-grid">';
   hds.forEach(h=>{html+=`<div class="cal-hd">${h}</div>`;});
   for(let i=0;i<firstDay;i++)html+='<div class="cal-cell"></div>';
   for(let d=1;d<=daysInMonth;d++){
     const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const isToday=ds===todayStr;const evts=events[ds]||[];
-    html+=`<div class="cal-cell cur-month${isToday?' today':''}${evts.length?' has-event':''}" ${evts.length?`onclick="showDayEvents('${ds}')"`:''}>${d}${evts.length?`<div class="cal-dots"><span class="cd" style="background:var(--accent);color:#fff;width:auto;height:auto;font-size:9px;padding:0 4px;border-radius:3px;font-weight:700">${evts.length}</span></div>`:''}</div>`;
+    const previewItems=evts.slice(0,2).map(ev=>`<div class="cal-item"><div class="cal-item-time">${ev.time||'待定'}</div><div class="cal-item-company">${escHTML(ev.company||'未命名公司')}</div></div>`).join('');
+    const moreText=evts.length>2?`<div class="cal-more">+${evts.length-2} 场</div>`:'';
+    html+=`<div class="cal-cell cur-month${isToday?' today':''}${evts.length?' has-event':''}" ${evts.length?`onclick="showDayEvents('${ds}')"`:''}><div class="cal-day-top"><span class="cal-day-num">${d}</span>${evts.length?`<div class="cal-dots"><span class="cd" style="background:var(--accent);color:#fff;width:auto;height:auto;font-size:9px;padding:0 4px;border-radius:3px;font-weight:700">${evts.length}</span></div>`:''}</div>${evts.length?`<div class="cal-day-list">${previewItems}${moreText}</div>`:''}</div>`;
   }
   html+='</div></div>';document.getElementById('calGrid').innerHTML=html;
   const monthEvents=[];Object.keys(events).sort().forEach(date=>{if(date.startsWith(`${calYear}-${String(calMonth+1).padStart(2,'0')}`)){events[date].forEach(ev=>monthEvents.push({...ev,date}));}});
@@ -997,7 +1007,7 @@ function escHTML(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(
 
 // ═══════ STATS PAGE ═══════
 function renderStatsPage(){
-  const f=filtered();if(!f.length){document.getElementById('chartsWrap').innerHTML='<div class="empty"><div class="ei">📊</div><div class="es">添加记录后查看统计</div></div>';return;}
+  const f=filtered().filter(e=>!['todo','applied'].includes(e.status));if(!f.length){document.getElementById('chartsWrap').innerHTML='<div class="empty"><div class="ei">📊</div><div class="es">从笔试开始添加记录后查看统计</div></div>';return;}
   let html='';
 
   // ── 1. 战绩摘要 ──
@@ -1022,8 +1032,7 @@ function renderStatsPage(){
 
   // ── 2. 转化漏斗 ──
   const funnelStages=[
-    {l:'投递',test:e=>e.status!=='todo'},
-    {l:'笔试',test:e=>(e.interviews||[]).some(iv=>iv.round==='笔试')},
+    {l:'笔试',test:e=>e.status==='written'||(e.interviews||[]).some(iv=>iv.round==='笔试')},
     {l:'一面',test:e=>(e.interviews||[]).some(iv=>['一面','二面','三面','HR面','加面','终面'].includes(iv.round))},
     {l:'二面',test:e=>(e.interviews||[]).some(iv=>['二面','三面','HR面','终面'].includes(iv.round))},
     {l:'三面+',test:e=>(e.interviews||[]).some(iv=>['三面','HR面','加面','终面'].includes(iv.round))},
@@ -1031,7 +1040,7 @@ function renderStatsPage(){
   ];
   const funnelNums=funnelStages.map(s=>f.filter(s.test).length);
   const funnelMax=Math.max(...funnelNums,1);
-  const funnelColors=['#6366F1','#8B5CF6','#4F6AE5','#3B82F6','#10B098','#22C55E'];
+  const funnelColors=['#8B5CF6','#4F6AE5','#3B82F6','#10B098','#22C55E'];
   html+=`<div class="chart-card"><div class="chart-title">🔽 转化漏斗</div>`;
   funnelStages.forEach((s,i)=>{
     const w=Math.max(funnelNums[i]/funnelMax*100,12);
@@ -1059,21 +1068,7 @@ function renderStatsPage(){
   });
   html+=`</div>`;
 
-  // ── 4. 平均响应天数 ──
-  const responseDays=[];
-  f.forEach(e=>{if(!e.applyDate||(e.interviews||[]).length===0)return;const firstIV=(e.interviews||[]).filter(iv=>iv.date).sort((a,b)=>a.date.localeCompare(b.date))[0];if(!firstIV)return;const d=Math.round((new Date(firstIV.date)-new Date(e.applyDate))/86400000);if(d>=0)responseDays.push({company:e.company,days:d});});
-  if(responseDays.length>0){
-    const avgD=Math.round(responseDays.reduce((s,r)=>s+r.days,0)/responseDays.length);
-    const fastest=responseDays.reduce((a,b)=>a.days<b.days?a:b);
-    const slowest=responseDays.reduce((a,b)=>a.days>b.days?a:b);
-    html+=`<div class="chart-card"><div class="chart-title">⏱️ 平均响应天数</div>
-      <div class="avg-row"><div class="avg-icon" style="background:var(--accent-light)">📨</div><div class="avg-info"><div class="avg-label">投递→首次面试 平均</div><div class="avg-val" style="color:var(--accent)">${avgD} 天</div></div></div>
-      <div class="avg-row"><div class="avg-icon" style="background:#DCFCE7">🚀</div><div class="avg-info"><div class="avg-label">最快 — ${fastest.company}</div><div class="avg-val" style="color:var(--s-offer)">${fastest.days} 天</div></div></div>
-      <div class="avg-row"><div class="avg-icon" style="background:#FEE2E2">🐢</div><div class="avg-info"><div class="avg-label">最慢 — ${slowest.company}</div><div class="avg-val" style="color:var(--s-rejected)">${slowest.days} 天</div></div></div>
-    </div>`;
-  }
-
-  // ── 5. 各轮平均耗时 ──
+  // ── 4. 各轮平均耗时 ──
   const roundPairs=[['笔试','一面'],['一面','二面'],['二面','三面'],['三面','HR面'],['HR面','Offer']];
   const pairResults=[];
   roundPairs.forEach(([r1,r2])=>{
@@ -1099,7 +1094,7 @@ function renderStatsPage(){
     html+=`</div>`;
   }
 
-  // ── 6. 面试热力图 ──
+  // ── 5. 面试热力图 ──
   const allIVDates={};
   f.forEach(e=>(e.interviews||[]).forEach(iv=>{if(iv.date){allIVDates[iv.date]=(allIVDates[iv.date]||0)+1;}}));
   if(Object.keys(allIVDates).length>0){
@@ -1134,12 +1129,12 @@ function renderStatsPage(){
       </div></div>`;
   }
 
-  // ── 7. 投递进度分布 (original) ──
-  const statusCounts=STATUSES.map(s=>({...s,count:f.filter(e=>e.status===s.k).length})).filter(s=>s.count>0);
+  // ── 6. 投递进度分布 ──
+  const statusCounts=STATUSES.filter(s=>!['todo','applied'].includes(s.k)).map(s=>({...s,count:f.filter(e=>e.status===s.k).length})).filter(s=>s.count>0);
   const maxC=Math.max(...statusCounts.map(s=>s.count),1);
   html+=`<div class="chart-card"><div class="chart-title">📊 投递进度分布</div>${statusCounts.map(s=>`<div class="funnel-bar"><div class="fb-label">${s.l}</div><div class="fb-track"><div class="fb-fill" style="width:${Math.max(s.count/maxC*100,8)}%;background:${s.c}">${s.count}</div></div></div>`).join('')}</div>`;
 
-  // ── 8. 企业类型 + 城市 (original, side by side on desktop) ──
+  // ── 7. 企业类型 + 城市 ──
   const typeCounts={};f.forEach(e=>{const t=e.companyType||'未分类';typeCounts[t]=(typeCounts[t]||0)+1;});
   const cityCounts={};f.forEach(e=>{const c=e.city||'未填';cityCounts[c]=(cityCounts[c]||0)+1;});
   const cityColors=['#4F6AE5','#E85D5D','#E8A838','#10B098','#8B5CF6','#E060A0','#6366F1','#14B8A6','#F97316','#06B6D4'];
@@ -1149,7 +1144,7 @@ function renderStatsPage(){
   html+=`<div class="chart-card"><div class="chart-title">📍 城市分布</div><div class="pie-wrap">${pieChart(cityCounts,cc)}</div></div>`;
   html+=`</div>`;
 
-  // ── 9. 公司进度追踪表 ──
+  // ── 8. 公司进度追踪表 ──
   const sorted=f.slice().sort((a,b)=>{const si=STATUSES.findIndex(s=>s.k===a.status),bi=STATUSES.findIndex(s=>s.k===b.status);return si-bi;});
   html+=`<div class="chart-card"><div class="chart-title">📋 公司进度追踪</div><div class="prog-table-wrap"><table class="prog-table"><thead><tr><th>公司</th><th>岗位</th><th>当前状态</th><th>面试轮次</th><th>最近时间</th></tr></thead><tbody>`;
   sorted.forEach(e=>{
@@ -1181,7 +1176,7 @@ function closeDetail(){
 }
 function renderDetailContent(it){
   if(!it)it=entries.find(e=>e.id===detailId);if(!it)return;const s=SM[it.status]||SM.todo;const ivs=it.interviews||[];
-  let html=`<div class="detail-info"><div class="di-company">${it.company}${it.companyType?`<span class="di-type">${it.companyType}</span>`:''}</div><div class="di-position">${[it.department,it.position].filter(Boolean).join(' · ')||'未填写岗位'}</div><div class="di-tags">${it.city?`<div class="di-tag">${ico('map-pin',14)} ${it.city}</div>`:''}${it.season?`<div class="di-tag">${ico('calendar',14)} ${it.season}</div>`:''}${it.platform?`<div class="di-tag">${ico('mail',14)} ${it.platform}</div>`:''}${it.referrer?`<div class="di-tag">${ico('handshake',14)} ${it.referrer}</div>`:''}</div><div class="di-status" style="background:${s.c}18;color:${s.c}"><span style="width:8px;height:8px;border-radius:50%;background:${s.c}"></span>${s.l}</div>${it.url?`<a class="di-url" href="${it.url}" target="_blank">${ico('external',14)} 查看进度</a>`:''}</div>
+  let html=`<div class="detail-info"><div class="di-company">${it.company}${it.companyType?`<span class="di-type">${it.companyType}</span>`:''}</div><div class="di-position">${[it.department,it.position].filter(Boolean).join(' · ')||'未填写岗位'}</div><div class="di-tags">${it.city?`<div class="di-tag">${ico('map-pin',14)} ${it.city}</div>`:''}${it.season?`<div class="di-tag">${ico('calendar',14)} ${it.season}</div>`:''}${it.platform?`<div class="di-tag">${ico('mail',14)} ${it.platform}</div>`:''}</div><div class="di-status" style="background:${s.c}18;color:${s.c}"><span style="width:8px;height:8px;border-radius:50%;background:${s.c}"></span>${s.l}</div>${it.url?`<a class="di-url" href="${it.url}" target="_blank">${ico('external',14)} 查看进度</a>`:''}</div>
     <div class="timeline-section"><div class="tl-title">${ico('bookmark',16)} 时间线</div><div class="timeline">
       ${it.applyDate?`<div class="tl-node"><div class="tl-dot passed"><span class="tl-dot-ico">✓</span></div><div class="tl-apply-node"><span class="tl-apply-label">投递</span><span>${it.applyDate}</span>${it.platform?`<span style="opacity:.6">· ${it.platform}</span>`:''}</div></div>`:''}
       ${ivs.map((iv,i)=>{const rc=IV_RESULTS.find(r=>r.k===(iv.result||'pending'));const dotClass=iv.result==='passed'?'passed':iv.result==='failed'?'failed':'pending';const dotIco=iv.result==='passed'?'✓':iv.result==='failed'?'✕':'…';const rcColor=rc?rc.c:'var(--s-applied)';const dtStr=fmtDateTime(iv.date,iv.time);
@@ -1277,17 +1272,17 @@ function openEditorFromDetail(){openEditor(detailId);}
 // ═══════ EDITOR ═══════
 function openEditor(id){
   editId=id||null;document.getElementById('editorTitle').textContent=id?'编辑记录':'新增投递';document.getElementById('delBtn').style.display=id?'block':'none';
-  document.getElementById('statusGrid').innerHTML=STATUSES.map(s=>`<button class="so" data-k="${s.k}" onclick="selSt('${s.k}')" style="border-color:${s.c}">${s.l}</button>`).join('');
+  document.getElementById('statusGrid').innerHTML=EDITABLE_STATUSES.map(s=>`<button class="so" data-k="${s.k}" onclick="selSt('${s.k}')" style="border-color:${s.c}">${s.l}</button>`).join('');
   const allCities=[...new Set([...CITIES_DEFAULT,...entries.map(e=>e.city).filter(Boolean)])];
   document.getElementById('cityList').innerHTML=allCities.map(c=>`<option value="${c}">`).join('');
   renderSeasons();
-  if(id){const it=entries.find(e=>e.id===id);if(!it)return;document.getElementById('f_co').value=it.company||'';document.getElementById('f_ct').value=it.companyType||'';document.getElementById('f_dept').value=it.department||'';document.getElementById('f_pos').value=it.position||'';document.getElementById('f_city').value=it.city||'';document.getElementById('f_season').value=it.season||SEASONS_DEFAULT[0];document.getElementById('f_date').value=it.applyDate||'';document.getElementById('f_ddl').value=it.deadline||'';document.getElementById('f_plat').value=it.platform||'';document.getElementById('f_ref').value=it.referrer||'';document.getElementById('f_url').value=it.url||'';document.getElementById('f_notes').value=it.notes||'';selSt(it.status||'todo');tmpIV=it.interviews?JSON.parse(JSON.stringify(it.interviews)):[];
-  }else{['f_co','f_dept','f_pos','f_city','f_ref','f_url','f_notes'].forEach(i=>document.getElementById(i).value='');['f_ct','f_plat'].forEach(i=>document.getElementById(i).selectedIndex=0);document.getElementById('f_date').value=new Date().toISOString().split('T')[0];document.getElementById('f_ddl').value='';document.getElementById('f_season').value=curSeason!=='全部'?curSeason:SEASONS_DEFAULT[0];selSt('applied');tmpIV=[];}
+  if(id){const it=entries.find(e=>e.id===id);if(!it)return;document.getElementById('f_co').value=it.company||'';document.getElementById('f_ct').value=it.companyType||'';document.getElementById('f_dept').value=it.department||'';document.getElementById('f_pos').value=it.position||'';document.getElementById('f_city').value=it.city||'';document.getElementById('f_season').value=it.season||SEASONS_DEFAULT[0];document.getElementById('f_date').value=it.applyDate||'';document.getElementById('f_plat').value=it.platform||'';document.getElementById('f_url').value=it.url||'';document.getElementById('f_notes').value=it.notes||'';selSt(['todo','applied'].includes(it.status)?'written':(it.status||'written'));tmpIV=it.interviews?JSON.parse(JSON.stringify(it.interviews)):[];
+  }else{['f_co','f_dept','f_pos','f_city','f_url','f_notes'].forEach(i=>document.getElementById(i).value='');['f_ct','f_plat'].forEach(i=>document.getElementById(i).selectedIndex=0);document.getElementById('f_date').value=new Date().toISOString().split('T')[0];document.getElementById('f_season').value=curSeason!=='全部'?curSeason:SEASONS_DEFAULT[0];selSt('written');tmpIV=[];}
   renderIVList();document.getElementById('editorModal').classList.add('show');
 }
 function closeEditor(){document.getElementById('editorModal').classList.remove('show');if(detailId){const it=entries.find(e=>e.id===detailId);if(it)renderDetailContent(it);}editId=null;}
 function selSt(k){document.querySelectorAll('.so').forEach(el=>{const s=SM[el.dataset.k];if(el.dataset.k===k){el.classList.add('active');el.style.background=s.c;el.style.color='#fff';}else{el.classList.remove('active');el.style.background='var(--card)';el.style.color='var(--text)';}});}
-function getSt(){const el=document.querySelector('.so.active');return el?el.dataset.k:'applied';}
+function getSt(){const el=document.querySelector('.so.active');return el?el.dataset.k:'written';}
 function renderIVList(){
   document.getElementById('ivList').innerHTML=tmpIV.map((iv,i)=>`<div class="iv-item"><div class="iv-h"><span class="iv-label">${iv.round||'面试'}</span><button class="iv-rm" onclick="rmIV(${i})">删除</button></div>
     <div class="fr"><div class="ff"><label>轮次</label><select onchange="tmpIV[${i}].round=this.value">${IV_ROUNDS.map(r=>`<option ${iv.round===r?'selected':''}>${r}</option>`).join('')}</select></div><div class="ff"><label>面试日期</label><input type="date" value="${iv.date||''}" onclick="this.showPicker?.()" onchange="tmpIV[${i}].date=this.value" style="cursor:pointer"></div><div class="ff" style="flex:0 0 55px"><label>时</label><select id="edh_${i}" onchange="edSetIVTime(${i})"><option value="">--</option>${Array.from({length:17},(_,j)=>j+6).map(h=>{const hs=String(h).padStart(2,'0');const hh=iv.time?iv.time.split(':')[0]:'';return`<option value="${hs}"${hh===hs?' selected':''}>${hs}</option>`;}).join('')}</select></div><div class="ff" style="flex:0 0 50px"><label>分</label><select id="edm_${i}" onchange="edSetIVTime(${i})"><option value="">--</option>${['00','10','20','30','40','50'].map(m=>{const mm=iv.time?iv.time.split(':')[1]:'';return`<option value="${m}"${mm===m?' selected':''}>${m}</option>`;}).join('')}</select></div></div>
@@ -1300,7 +1295,7 @@ function addIV(){let nextRound='一面';if(tmpIV.length>0){const lastRound=tmpIV
 function rmIV(i){tmpIV.splice(i,1);renderIVList();}
 function setIVResult(i,k){tmpIV[i].result=k;renderIVList();}
 function edSetIVTime(i){const h=document.getElementById('edh_'+i)?.value;const m=document.getElementById('edm_'+i)?.value;tmpIV[i].time=(h&&m)?h+':'+m:(h?h+':00':'');}
-function saveEntry(){const co=document.getElementById('f_co').value.trim();if(!co){alert('请填写公司名称');return;}const data={company:co,companyType:document.getElementById('f_ct').value,department:document.getElementById('f_dept').value.trim(),position:document.getElementById('f_pos').value.trim(),city:document.getElementById('f_city').value.trim(),season:document.getElementById('f_season').value,applyDate:document.getElementById('f_date').value,deadline:document.getElementById('f_ddl').value,platform:document.getElementById('f_plat').value,referrer:document.getElementById('f_ref').value.trim(),url:document.getElementById('f_url').value.trim(),notes:document.getElementById('f_notes').value.trim(),status:getSt(),interviews:tmpIV,updatedAt:Date.now()};if(editId){const idx=entries.findIndex(e=>e.id===editId);if(idx>=0)entries[idx]={...entries[idx],...data};}else{data.id='j_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);data.createdAt=Date.now();entries.push(data);}saveData();closeEditor();switchPage(curPage,document.querySelector('.tab-item.active'));}
+function saveEntry(){const co=document.getElementById('f_co').value.trim();if(!co){alert('请填写公司名称');return;}const data={company:co,companyType:document.getElementById('f_ct').value,department:document.getElementById('f_dept').value.trim(),position:document.getElementById('f_pos').value.trim(),city:document.getElementById('f_city').value.trim(),season:document.getElementById('f_season').value,applyDate:document.getElementById('f_date').value,platform:document.getElementById('f_plat').value,url:document.getElementById('f_url').value.trim(),notes:document.getElementById('f_notes').value.trim(),status:getSt(),interviews:tmpIV,updatedAt:Date.now()};if(editId){const idx=entries.findIndex(e=>e.id===editId);if(idx>=0){entries[idx]={...entries[idx],...data};delete entries[idx].deadline;delete entries[idx].referrer;}}else{data.id='j_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);data.createdAt=Date.now();entries.push(data);}saveData();closeEditor();switchPage(curPage,document.querySelector('.tab-item.active'));}
 function delEntry(){if(!editId||!confirm('确定删除？'))return;entries=entries.filter(e=>e.id!==editId);saveData();closeEditor();if(detailId===editId){detailId=null;document.getElementById('detailView').classList.remove('show');}switchPage(curPage,document.querySelector('.tab-item.active'));}
 
 // ═══════ Settings ═══════
